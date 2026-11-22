@@ -125,7 +125,7 @@ export default function SpaceLayer({ off }) {
     // Couloir de vol d'un côté : les marges sur grand écran, une bande de 26 px au bord sinon.
     const lane = (side) => {
       const gw = gutter();
-      const [a, b2] = wide() ? [30, gw - 30] : [8, 30];
+      const [a, b2] = wide() ? [30, gw - 30] : [10, 34];
       return side < 0 ? [a, b2] : [W - b2, W - a];
     };
     let rocks = [];
@@ -158,7 +158,8 @@ export default function SpaceLayer({ off }) {
       ship.heading = up ? -Math.PI / 2 : Math.PI / 2;
       ship.vx = 0; ship.vy = up ? -1.6 : 1.6;
       ship.wander = 0;
-      ship.scale = wide() ? Math.min(0.5, (gutter() - 40) / 200) : 0.24;
+      ship.scale = wide() ? Math.min(0.5, (gutter() - 40) / 200) : 0.36;
+      if (el) el.classList.toggle('small', !wide());
       ship.on = true;
       if (el) el.style.display = 'block';
     };
@@ -211,7 +212,7 @@ export default function SpaceLayer({ off }) {
       if (el) el.style.transform = `translate(${ship.x}px, ${ship.y}px) rotate(${ang}deg) scale(${ship.scale})`;
       if (ship.y < -140 || ship.y > H + 140) {
         ship.on = false; if (el) el.style.display = 'none';
-        ship.next = now + 12000 + Math.random() * 18000;
+        ship.next = now + (wide() ? 12000 + Math.random() * 18000 : 7000 + Math.random() * 9000);
       }
     }
     raf = requestAnimationFrame(frame);

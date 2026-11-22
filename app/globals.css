@@ -416,3 +416,5 @@ html.orn-cursor input:not([type=checkbox]):not([type=radio]),html.orn-cursor tex
 .space-cursor.down i{transform:scale(.8)}
 .tile,.card,.pack,.plan,.frame{isolation:isolate}
 @media(prefers-reduced-motion:reduce){.space-rocket{display:none!important}}
+/* Fusée sur téléphone : plus grande et plus lumineuse pour rester visible au bord de l'écran */
+.space-rocket.small{filter:drop-shadow(0 0 10px rgba(255,122,47,.9)) drop-shadow(0 0 24px rgba(255,122,47,.5)) brightness(1.15)}
