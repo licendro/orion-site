@@ -15,3 +15,10 @@ npm ci
 npm run setup
 pm2 start npm --name orion-bot -- start && pm2 save
 ```
+
+## Commandes
+
+- Clients : `/mes-scripts`
+- Équipe : `/client info|resync`, `/donner joueur package raison` (package Tebex offert à un pseudo Cfx.re, via l'API Plugin : nécessite `TEBEX_SECRET_KEY` dans le `.env` du site ; **non révocable**)
+- Modération : `/ban` `/unban` `/kick` `/mute` `/unmute` `/warn` `/warns` `/unwarn` `/clear` `/slowmode` `/lock` `/unlock` `/userinfo` (3 avertissements = muet 1 h automatiquement). Tout est journalisé dans #modération.
+- AutoMod Discord (créé par `npm run setup`) : invitations d'autres serveurs, spam de mentions, spam, insultes et contenu choquant.

@@ -24,7 +24,7 @@ function loadTebexJs() {
   });
 }
 
-export function ShopProvider({ products, mode, user, loginRequired = false, children }) {
+export function ShopProvider({ products, mode, user, owned = [], loginRequired = false, children }) {
   const byKey = useMemo(() => new Map(products.map((p) => [p.key, p])), [products]);
   const pack = useMemo(() => products.find((p) => p.bundle.length) || null, [products]);
   const [cart, setCart] = useState([]);
@@ -51,20 +51,35 @@ export function ShopProvider({ products, mode, user, loginRequired = false, chil
   const packHas = useCallback((k) => !!pack && cart.includes(pack.key) && pack.bundle.includes(k), [pack, cart]);
   const inCart = useCallback((k) => cart.includes(k) || packHas(k), [cart, packHas]);
 
+  // orn_lib : gratuit et obligatoire. Ajouté avec le premier script (sauf s'il est déjà possédé), jamais retiré seul.
+  const lib = useMemo(() => products.find((p) => p.required) || null, [products]);
+  const needsLib = useCallback((c) => !!lib && !owned.includes(lib.key) && c.some((x) => x !== lib.key), [lib, owned]);
+
   const toggle = useCallback((k) => {
     const p = byKey.get(k);
     if (!p) return;
     if (packHas(k)) return toast(`${p.name} fait partie du ${pack.name}`, true);
     if (cart.includes(k)) {
+      if (p.required && needsLib(cart)) return toast(`${p.name} est requis par les scripts de ton panier.`, true);
       setCart((c) => c.filter((x) => x !== k));
       toast(`${p.name} retiré`);
     } else {
-      setCart((c) => (p.bundle.length ? [...c.filter((x) => !p.bundle.includes(x)), k] : [...c, k]));
-      toast(`${p.name} ajouté`);
+      let next = p.bundle.length ? [...cart.filter((x) => !p.bundle.includes(x)), k] : [...cart, k];
+      if (needsLib(next) && !next.includes(lib.key)) {
+        next = [lib.key, ...next];
+        toast(`${p.name} ajouté, avec ${lib.name} (gratuit, requis)`);
+      } else toast(`${p.name} ajouté`);
+      setCart(next);
     }
-  }, [byKey, cart, pack, packHas, toast]);
+  }, [byKey, cart, pack, packHas, toast, needsLib, lib]);
 
-  const remove = useCallback((k) => setCart((c) => c.filter((x) => x !== k)), []);
+  const remove = useCallback((k) => {
+    const p = byKey.get(k);
+    setCart((c) => {
+      if (p?.required && needsLib(c)) { toast(`${p.name} est requis par les scripts de ton panier.`, true); return c; }
+      return c.filter((x) => x !== k);
+    });
+  }, [byKey, needsLib, toast]);
 
   const lines = cart.map((k) => byKey.get(k)).filter(Boolean);
   const total = lines.reduce((s, p) => s + p.price, 0);
@@ -242,7 +257,7 @@ function CartDrawer() {
               <span>
                 <div className="n">{p.name}</div>
                 <div className="p">
-                  {p.bundle.length ? `${p.bundle.length} scripts · ` : ''}{eur(p.price)}
+                  {p.required ? 'Requis · ' : ''}{p.bundle.length ? `${p.bundle.length} scripts · ` : ''}{eur(p.price)}
                   {p.was ? <s style={{ marginLeft: 6 }}>{eur(p.was)}</s> : null}
                 </div>
               </span>

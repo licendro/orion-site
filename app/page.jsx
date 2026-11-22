@@ -2,7 +2,6 @@ import { getCatalog } from '../lib/catalog';
 import { eur } from '../lib/format';
 import Catalog from '../components/Catalog';
 import Effects, { CompatTrack } from '../components/Effects';
-import QuoteForm, { QuoteButton } from '../components/QuoteForm';
 import { AddButton } from '../components/Shop';
 import { Price, PromoBand } from '../components/Price';
 
@@ -33,6 +32,7 @@ export default async function Home() {
   const { products, categories, pack } = await getCatalog();
   const find = (k) => products.find((p) => p.key === k);
   const police = find('ornpolice');
+  const lib = products.find((p) => p.required);
   const bank = find('ornbank');
   const shop = find('ornshop');
   const packItems = pack ? pack.bundle.map(find).filter(Boolean) : [];
@@ -44,12 +44,12 @@ export default async function Home() {
       <section className="hero">
         <canvas id="stars" aria-hidden="true"></canvas>
         <div className="wrap" style={{ position: 'relative' }}>
-          {police ? <a className="pill" href={`/scripts/${police.slug}`}><b>Nouveau</b>orn_police · fouille, menottes et tablette de recherche <span className="arrow">→</span></a> : null}
+          {lib ? <a className="pill" href={`/scripts/${lib.slug}`}><b>Gratuit</b>{lib.name} · la base de tous nos scripts <span className="arrow">→</span></a> : null}
           <h1>Une seule interface pour tout votre serveur. <span>Chaque script la parle.</span></h1>
           <p className="sub">Les scripts Orion partagent les mêmes menus, interactions et notifications. Installez-en un ou douze : votre serveur garde un rendu identique, sur ESX, QBCore ou QBox.</p>
           <div className="cta">
             <a className="btn pri" href="#scripts">Parcourir les scripts <span className="arrow">→</span></a>
-            <a className="btn" href="#services">Un script sur mesure</a>
+            {lib ? <AddButton k={lib.key} variant="" /> : <a className="btn" href="/services">Nos services</a>}
           </div>
         </div>
         <div className="stage">
@@ -71,7 +71,7 @@ export default async function Home() {
         <div className="wrap">
           <div className="head">
             <h2>Pensé comme une plateforme, pas comme une pile de scripts.</h2>
-            <p className="sub">Nos scripts sont conçus ensemble : même interface, mêmes réflexes pour vos joueurs, compatibles ESX, QBCore et QBox sans rien adapter.</p>
+            <p className="sub">Tous nos scripts reposent sur orn_lib, un package gratuit et obligatoire : menus, interactions, ciblage, notifications et compatibilité framework. Une mise à jour de la base profite à tous vos scripts Orion.</p>
           </div>
           <div className="bento">
             <article className="tile t1">
@@ -97,6 +97,29 @@ export default async function Home() {
                 {['ESX', 'QBCore', 'QBox', 'ox_inventory', 'ox_target', 'lb-phone'].map((x, i) => <span key={x} className={i === 0 || i === 3 ? 'on' : ''}>{x}</span>)}
               </div>
             </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="band" id="lib" style={{ paddingTop: 0 }}>
+        <div className="wrap">
+          <div className="spot">
+            <div className="stx">
+              <span className="label"><i></i>orn_lib · gratuit et obligatoire</span>
+              <h3>Une base commune. Des écrans sans limite.</h3>
+              <p className="sub">orn_lib contient tout ce dont nos scripts ont besoin, aujourd’hui et demain. Ses menus vont du simple choix à l’écran complet : carte interactive, tablette, banque. Et quand un script a besoin de sa propre interface, elle reste dans la même direction artistique.</p>
+              <ul className="flist">
+                <li><span>01</span>Menus et interactions communs à tous nos scripts</li>
+                <li><span>02</span>Écrans aussi complexes que nécessaire : cartes, listes, formulaires</li>
+                <li><span>03</span>Interfaces propres à certains scripts, toujours dans le style Orion</li>
+                <li><span>04</span>Ajouté automatiquement et gratuitement à votre premier achat</li>
+              </ul>
+              <div className="buy">
+                {lib ? <AddButton k={lib.key} variant="pri" /> : null}
+                {lib ? <a className="btn" href={`/scripts/${lib.slug}`}>Détails</a> : null}
+              </div>
+            </div>
+            <div className="frame"><i className="tk a"></i><i className="tk d"></i><img src="/img/fenetres.jpg" alt="Écrans Orion : fenêtres, listes et carte" loading="lazy" /><div className="float"><img src="/img/contexte.jpg" alt="Menu contextuel Orion" loading="lazy" /></div></div>
           </div>
         </div>
       </section>
@@ -153,61 +176,12 @@ export default async function Home() {
         <div className="wrap">
           <div className="head">
             <div><span className="label"><i></i>Services</span><h2>Votre serveur, développé par ceux qui écrivent les scripts.</h2></div>
-            <p className="sub">Scripts sur mesure, bot Discord ou partenariat au mois. On travaille avec la même base que nos scripts, donc tout ce qu'on livre reste cohérent avec le reste de votre serveur.</p>
+            <p className="sub">Bot Discord, développeur attitré au mois ou script sur mesure : des formules claires, avec tout ce qui est inclus.</p>
           </div>
-          <div className="tiers">
-            <article className="tier">
-              <span className="tg" style={{ visibility: 'hidden' }} aria-hidden="true">·</span>
-              <h3>Script sur mesure</h3>
-              <div className="pr"><b>20 à 100 €</b></div>
-              <p>Le prix moyen d'un script développé pour votre serveur, selon sa taille.</p>
-              <ul><li>Cahier des charges validé ensemble</li><li>ESX, QBCore ou QBox</li><li>Interface Orion incluse</li><li>Livraison en 3 à 7 jours</li><li>30 jours de corrections</li></ul>
-              <QuoteButton type="sur-mesure" className="btn">Demander un devis</QuoteButton>
-            </article>
-            <article className="tier feat">
-              <span className="tg">Pour les serveurs</span>
-              <h3>Partenariat serveur</h3>
-              <div className="pr"><b>20 à 200 €</b><span>/ mois</span></div>
-              <p>Un développeur attitré pour votre serveur. Le prix suit la taille du serveur et le volume de travail.</p>
-              <ul><li>Corrections et mises à jour en continu</li><li>Nouveaux scripts selon la formule choisie</li><li>Demandes traitées en priorité</li><li>Réduction sur tout notre catalogue</li><li>Formule ajustable chaque mois, sans engagement</li></ul>
-              <QuoteButton type="partenariat" className="btn pri">Proposer un partenariat</QuoteButton>
-            </article>
-            <article className="tier">
-              <span className="tg" style={{ visibility: 'hidden' }} aria-hidden="true">·</span>
-              <h3>Bot Discord</h3>
-              <div className="pr"><b>25 €</b></div>
-              <p>Le bot de votre serveur, prêt et installé sur votre Discord.</p>
-              <ul><li>Tickets de support et candidatures</li><li>Whitelist et attribution des rôles</li><li>Statut du serveur et joueurs en ligne</li><li>Logs de modération et d'arrivées</li><li>Couleurs et nom de votre serveur</li></ul>
-              <QuoteButton type="bot" className="btn">Commander le bot</QuoteButton>
-            </article>
-          </div>
-
-          <div className="carte">
-            <div><h3>À la carte</h3><p className="sub" style={{ fontSize: 16 }}>Pour un besoin ponctuel. Le prix final dépend de la taille du travail ; le devis est gratuit.</p></div>
-            <div className="rows">
-              {[
-                ['Adaptation de framework', 'dès 25 €', "Passer un script d'ESX à QBCore ou QBox, et inversement."],
-                ['Correction de bug', 'dès 15 €', 'Erreur console, script qui ne démarre pas, conflit entre ressources.'],
-                ['Optimisation', 'dès 30 €', 'Baisse du resmon, boucles et requêtes SQL trop lourdes.'],
-                ['Audit de sécurité', 'dès 35 €', "Recherche de backdoors, d'events exploitables et de triggers non protégés."],
-                ['Interface NUI sur mesure', 'dès 79 €', 'Menu, tablette ou écran complet dans le style de votre serveur.'],
-                ['Serveur clé en main', 'sur devis', 'Installation txAdmin, framework, base de données, suite ox et scripts Orion configurés.'],
-                ['Site boutique relié à Tebex', 'dès 199 €', 'Votre propre site, produits Tebex affichés, paiement sans quitter la page.'],
-                ['Système complet', 'sur devis', 'Métier, économie, gouvernement, braquages : un ensemble de scripts pensé ensemble.'],
-              ].map(([a, b, c]) => <div className="rw" key={a}><b>{a}</b><span className="p">{b}</span><span className="d">{c}</span></div>)}
-            </div>
-          </div>
-
-          <div className="steps">
-            <div className="step"><b>Devis gratuit</b><p>Vous décrivez le besoin, on répond sous 24 h avec un prix et un délai.</p></div>
-            <div className="step"><b>Acompte de 50 %</b><p>Le travail commence à la réception de l'acompte, via Tebex ou PayPal.</p></div>
-            <div className="step"><b>Test sur votre serveur</b><p>Vous essayez avant le solde. Les retouches demandées sont incluses.</p></div>
-            <div className="step"><b>Livraison</b><p>Solde réglé, fichiers livrés, puis 30 jours de corrections gratuites.</p></div>
-          </div>
-
-          <div className="quote" id="devis">
-            <div><h3>Demander un devis</h3><p className="sub" style={{ fontSize: 16 }}>Plus la description est précise, plus le devis l'est aussi. Captures, liens et exemples sont les bienvenus sur Discord ensuite.</p></div>
-            <QuoteForm />
+          <div className="svc">
+            <a href="/services#bot"><span className="from">dès 25 €</span><b>Bot Discord</b><p>Tickets, rôles, statut, modération, candidatures, liaison boutique.</p><span className="more">Voir les formules →</span></a>
+            <a href="/services#partenariat"><span className="from">20 à 200 € / mois</span><b>Développeur partenaire</b><p>On rejoint votre équipe : corrections, nouveaux scripts, optimisation.</p><span className="more">Voir les formules →</span></a>
+            <a href="/services#sur-mesure"><span className="from">dès 20 €</span><b>Script sur mesure</b><p>Le script qu’il manque à votre serveur, dans le style Orion.</p><span className="more">Voir les formules →</span></a>
           </div>
         </div>
       </section>
@@ -219,6 +193,7 @@ export default async function Home() {
             <details open><summary>Comment je reçois mes scripts ?</summary><p>Après le paiement, ils apparaissent dans votre Keymaster sur portal.cfx.re, liés au compte FiveM utilisé à la connexion, dans la section « Granted assets ».</p></details>
             <details><summary>Pourquoi se connecter avec FiveM ?</summary><p>Les scripts sont protégés par l'escrow Cfx.re. La connexion relie l'achat à votre compte, sans quoi la licence ne peut pas être attribuée.</p></details>
             <details><summary>Quels frameworks sont compatibles ?</summary><p>ESX Legacy, QBCore et QBox, détectés automatiquement. Inventaires : ox_inventory, qs-inventory, qb-inventory.</p></details>
+            <details><summary>C'est quoi orn_lib ?</summary><p>La base gratuite et obligatoire de tous nos scripts : menus, interactions, ciblage, notifications et compatibilité ESX, QBCore, QBox. Elle est ajoutée automatiquement à votre premier achat et livrée dans votre Keymaster. Démarrez-la avant nos scripts dans le server.cfg.</p></details>
             <details><summary>Comment marche un partenariat ?</summary><p>On fixe ensemble une formule entre 20 et 200 € par mois selon la taille du serveur et ce dont vous avez besoin. Vous pouvez l'ajuster ou l'arrêter chaque mois.</p></details>
             <details><summary>Comment se passe une commande sur mesure ?</summary><p>Devis gratuit sous 24 h, acompte de 50 %, test sur votre serveur, puis solde et livraison. Les 30 jours suivants, les corrections sont gratuites. Le code livré sur mesure vous appartient.</p></details>
             <details><summary>Je peux modifier le code ?</summary><p>La configuration, les textes et les fichiers d'ouverture (client/open.lua, server/open.lua) sont modifiables. Le cœur du script reste protégé.</p></details>
@@ -233,7 +208,7 @@ export default async function Home() {
           <p className="sub">Ajoutez les autres quand votre serveur en a besoin : ils partagent la même base, donc la même interface, sans rien reconfigurer.</p>
           <div className="cta">
             <a className="btn pri" href="#scripts">Voir le catalogue</a>
-            <a className="btn" href="#devis">Demander un devis</a>
+            <a className="btn" href="/services#devis">Demander un devis</a>
           </div>
         </div>
       </section>

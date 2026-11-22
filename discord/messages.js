@@ -101,6 +101,7 @@ export function buildPost(key, ch) {
           { name: 'Comment je reçois mes scripts ?', value: 'Après le paiement, ils apparaissent dans ton Keymaster (portal.cfx.re → Granted assets), sur le compte FiveM utilisé au paiement.' },
           { name: 'Comment obtenir le rôle Client ?', value: 'Il est donné automatiquement après ton achat si tu t’es connecté avec Discord sur le site. Sinon, ouvre un ticket « Support » avec ton numéro de commande Tebex.' },
           { name: 'Quels frameworks ?', value: 'ESX Legacy, QBCore et QBox, détectés automatiquement. Inventaires : ox_inventory, qs-inventory, qb-inventory.' },
+          { name: 'C’est quoi orn_lib ?', value: 'La base gratuite et obligatoire de tous nos scripts : menus, interactions, ciblage, notifications, compatibilité framework. Elle est ajoutée automatiquement à ton premier achat sur le site.' },
           { name: 'Je peux modifier le code ?', value: 'La configuration, les textes et les fichiers open (client/open.lua, server/open.lua) oui. Le cœur reste protégé par l’escrow Cfx.re.' },
           { name: 'Remboursement ?', value: 'Les scripts étant livrés immédiatement, ils ne sont pas remboursables une fois téléchargés. Un problème ? Ouvre un ticket, on le règle.' },
         )],
@@ -109,10 +110,10 @@ export function buildPost(key, ch) {
     case 'install':
       return {
         embeds: [base().setTitle('📚 Installer un script Orion').setDescription([
-          '**1.** Télécharge le script depuis ton Keymaster (portal.cfx.re → Granted assets).',
+          '**1.** Télécharge le script **et orn_lib** (gratuit, obligatoire) depuis ton Keymaster (portal.cfx.re → Granted assets).',
           '**2.** Place les dossiers dans `resources/[orion]/` sans les renommer.',
-          '**3.** Dans le `server.cfg`, ajoute le script après ton framework (et ses éventuelles dépendances indiquées dans son README) :',
-          '```cfg\nensure es_extended   # ou qb-core / qbx_core\nensure orn_bank\n```',
+          '**3.** Dans le `server.cfg`, démarre **orn_lib avant** nos scripts, après ton framework :',
+          '```cfg\nensure es_extended   # ou qb-core / qbx_core\nensure orn_lib\nensure orn_bank\n```',
           '**4.** Ouvre `config.lua` du script et règle-le.',
           '**5.** Si le script a un fichier `.sql`, importe-le dans ta base de données.',
           '**6.** Redémarre le serveur. Une erreur ? Envoie-la dans un ticket « Support » avec ta version du script.',

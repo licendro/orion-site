@@ -130,6 +130,25 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS warnings (
+  id INTEGER PRIMARY KEY,
+  discord_id TEXT NOT NULL,
+  moderator_id TEXT,
+  reason TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS grants (
+  id INTEGER PRIMARY KEY,
+  cfx_username TEXT NOT NULL,
+  product_key TEXT,
+  tebex_id INTEGER,
+  note TEXT,
+  by_discord TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_warnings_user ON warnings(discord_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status, run_after);
 CREATE INDEX IF NOT EXISTS idx_orders_discord ON orders(discord_id);
 CREATE INDEX IF NOT EXISTS idx_items_order ON order_items(order_id);

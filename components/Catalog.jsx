@@ -5,6 +5,7 @@ import { useShop, AddButton } from './Shop';
 import { Price, PromoBand } from './Price';
 
 function Badge({ p }) {
+  if (p.required) return <span className="badge hot">Gratuit · Obligatoire</span>;
   if (p.price === 0 && p.basePrice === 0) return <span className="badge">Gratuit</span>;
   if (p.was) return <span className="badge hot">−{p.pct} %</span>;
   if (p.isNew) return <span className="badge">Nouveau</span>;

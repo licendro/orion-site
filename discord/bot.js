@@ -1,13 +1,17 @@
 // Bot Orion (première version) : validation du règlement, rôles de notification, tickets, logs.
 // Lancer :  npm start   (en continu avec PM2 : pm2 start npm --name orion-bot -- start)
-import 'dotenv/config';
+import dotenv from 'dotenv';
+// .env du bot, puis celui du site (clé Tebex secrète, etc.) sans écraser.
+dotenv.config({ path: new URL('./.env', import.meta.url).pathname });
+dotenv.config({ path: new URL('../.env', import.meta.url).pathname });
 import fs from 'node:fs';
 import {
   ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, ChannelType, Client, EmbedBuilder, Events,
   GatewayIntentBits, MessageFlags, PermissionFlagsBits as P, SlashCommandBuilder,
 } from 'discord.js';
 import { COLOR, NOTIF_ROLES, ROLES, TICKETS } from './structure.js';
-import { addJob, startJobs } from './jobs.js';
+import { addJob, db, startJobs } from './jobs.js';
+import { MOD_COMMANDS, createModeration } from './moderation.js';
 
 const CONFIG = new URL('./config.json', import.meta.url);
 const loadCfg = () => JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
@@ -31,6 +35,7 @@ async function logTo(guild, key, embed) {
 }
 
 let jobs = null;
+const mod = createModeration({ db, getCfg: () => cfg });
 
 const COMMANDS = [
   new SlashCommandBuilder().setName('mes-scripts').setDescription('Voir les scripts Orion que tu possèdes'),
@@ -46,8 +51,8 @@ client.once(Events.ClientReady, async (c) => {
   jobs = startJobs(client, () => cfg);
   try {
     const guild = await c.guilds.fetch(process.env.GUILD_ID);
-    await guild.commands.set(COMMANDS.map((x) => x.toJSON()));
-    console.log('✓ Commandes /mes-scripts et /client enregistrées');
+    await guild.commands.set([...COMMANDS, ...MOD_COMMANDS].map((x) => x.toJSON()));
+    console.log(`✓ ${COMMANDS.length + MOD_COMMANDS.length} commandes enregistrées`);
   } catch (e) { console.error('Commandes :', e.message); }
 });
 
@@ -68,7 +73,11 @@ client.on(Events.InteractionCreate, async (i) => {
   try {
     if (!i.inGuild()) return;
 
+    if (i.isAutocomplete()) return mod.autocomplete(i);
+    if (i.isButton() && i.customId.startsWith('orion:grant')) return mod.button(i);
+
     // Commandes slash
+    if (i.isChatInputCommand() && mod.names.has(i.commandName)) return mod.command(i);
     if (i.isChatInputCommand()) {
       if (i.commandName === 'mes-scripts') {
         const list = jobs?.owned(i.user.id) || [];
@@ -199,7 +208,7 @@ client.on(Events.InteractionCreate, async (i) => {
     console.error('[interaction]', e);
     const msg = 'Une erreur est survenue. Préviens un membre de l’équipe.';
     if (i.deferred || i.replied) i.editReply?.(msg).catch(() => {});
-    else i.reply?.(ephemeral(msg)).catch(() => {});
+    else if (!i.isAutocomplete?.()) i.reply?.(ephemeral(msg)).catch(() => {});
   }
 });
 

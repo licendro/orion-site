@@ -364,3 +364,55 @@ footer a:hover{color:var(--ink)}
 .st2 .btn.sm{min-height:34px}
 .lnk{background:none;border:0;color:var(--ink3);font-size:13px;cursor:pointer;text-decoration:underline;padding:6px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+/* ===== Grilles tarifaires ===== */
+.plans{display:grid;gap:14px}
+.plans.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.plans.n4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.plan{position:relative;border:1px solid var(--line);background:rgba(7,8,12,.82);backdrop-filter:blur(6px);padding:clamp(22px,2.6vw,30px);display:flex;flex-direction:column;gap:16px}
+.plan.feat{border-color:rgba(255,122,47,.55);background:linear-gradient(180deg,rgba(255,122,47,.08),rgba(7,8,12,.85) 40%);box-shadow:0 0 0 1px rgba(255,122,47,.18),0 30px 80px rgba(0,0,0,.5)}
+.plan .tg{align-self:flex-start;font-size:12px;font-weight:600;padding:3px 8px;background:var(--acc);color:#120700;margin-bottom:-4px}
+.plan h3{font-size:22px}
+.plan .pr{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.plan .pr b{font:600 40px/1 "Inter Tight";letter-spacing:-.04em}
+.plan .pr span{color:var(--ink3);font-size:14px}
+.plan ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;flex:1;border-top:1px solid var(--line)}
+.plan li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--line);font-size:14.5px;color:var(--ink2)}
+.plan li.off{color:var(--ink3);opacity:.55}
+.plan li .yes{color:var(--acc);font-weight:700}
+.plan li .no{color:var(--ink3)}
+.plan li .val{font:500 12.5px "JetBrains Mono";color:var(--ink);text-align:right;white-space:nowrap}
+.plan li .yes,.plan li .no{text-align:right;min-width:20px}
+.plan .btn{width:100%}
+@media(max-width:1100px){.plans.n4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:860px){.plans.n3,.plans.n4{grid-template-columns:minmax(0,1fr)}}
+.svc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.svc a{border:1px solid var(--line);background:rgba(7,8,12,.82);padding:26px;text-decoration:none;display:flex;flex-direction:column;gap:10px;transition:border-color .2s,transform .2s}
+.svc a:hover{border-color:var(--line2);transform:translateY(-3px)}
+.svc b{font:600 20px "Inter Tight"}
+.svc .from{font:600 15px "Inter Tight";color:var(--acc)}
+.svc p{margin:0;color:var(--ink3);font-size:15px;flex:1}
+.svc .more{font-size:14px;color:var(--ink2)}
+@media(max-width:860px){.svc{grid-template-columns:minmax(0,1fr)}}
+/* ===== Espace : ciel, nébuleuses, fusée, curseur ===== */
+.space-bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+.space-nebula{position:fixed;inset:0;z-index:0;pointer-events:none;
+ background:radial-gradient(60vw 40vw at 85% 10%,rgba(110,170,255,.07),transparent 70%),
+            radial-gradient(50vw 35vw at 5% 70%,rgba(255,122,47,.05),transparent 70%),
+            radial-gradient(40vw 30vw at 60% 95%,rgba(140,110,255,.05),transparent 70%)}
+.demo,.nav,main,footer{position:relative;z-index:1}
+.nav{z-index:30}
+.space-rocket{position:fixed;left:0;top:0;z-index:0;display:none;pointer-events:none;transform-origin:100px 40px;margin:-40px 0 0 -100px;filter:drop-shadow(0 0 14px rgba(255,122,47,.35))}
+.space-rocket .flame{transform-origin:58px 40px;animation:flame .12s ease-in-out infinite alternate}
+@keyframes flame{from{transform:scaleX(.82)}to{transform:scaleX(1.12)}}
+html.orn-cursor,html.orn-cursor *{cursor:none!important}
+html.orn-cursor input:not([type=checkbox]):not([type=radio]),html.orn-cursor textarea{cursor:text!important}
+.space-cursor{position:fixed;left:0;top:0;z-index:9999;pointer-events:none;opacity:0;transition:opacity .2s;will-change:transform}
+.space-cursor i{position:absolute;left:-15px;top:-15px;width:30px;height:30px;border:1px solid rgba(237,239,243,.55);border-radius:50%;transition:transform .2s,border-color .2s,background .2s}
+.space-cursor i::before,.space-cursor i::after{content:"";position:absolute;background:rgba(237,239,243,.5)}
+.space-cursor i::before{left:50%;top:-6px;width:1px;height:5px}
+.space-cursor i::after{top:50%;left:-6px;height:1px;width:5px}
+.space-cursor b{position:absolute;left:-2.5px;top:-2.5px;width:5px;height:5px;border-radius:50%;background:var(--acc);box-shadow:0 0 10px 2px rgba(255,122,47,.6)}
+.space-cursor.hot i{transform:scale(1.55);border-color:var(--acc);background:rgba(255,122,47,.08)}
+.space-cursor.down i{transform:scale(.8)}
+.tile,.card,.pack,.plan,.frame{isolation:isolate}
+@media(prefers-reduced-motion:reduce){.space-rocket{display:none!important}}

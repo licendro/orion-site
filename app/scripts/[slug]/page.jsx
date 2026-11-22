@@ -16,6 +16,7 @@ export default async function ProductPage({ params }) {
   if (!p) notFound();
   const { products } = await getCatalog();
   const bundleItems = p.bundle.map((k) => products.find((x) => x.key === k)).filter(Boolean);
+  const lib = products.find((x) => x.required);
 
   return (
     <main className="band" style={{ paddingTop: 'clamp(40px,6vw,72px)' }}>
@@ -33,6 +34,8 @@ export default async function ProductPage({ params }) {
             ) : null}
             <dl className="spec">
               <dt>Frameworks</dt><dd>ESX, QBCore, QBox</dd>
+              {p.required ? <><dt>Prix</dt><dd>Gratuit, obligatoire pour tous nos scripts</dd></>
+                : lib ? <><dt>Requis</dt><dd><a href={`/scripts/${lib.slug}`}>{lib.name}</a> (gratuit, ajouté automatiquement au panier)</dd></> : null}
               <dt>Protection</dt><dd>Escrow Cfx.re, configuration ouverte</dd>
               <dt>Mises à jour</dt><dd>Incluses à vie</dd>
               <dt>Livraison</dt><dd>Keymaster Cfx.re, juste après le paiement</dd>

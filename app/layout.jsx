@@ -1,11 +1,12 @@
 import './globals.css';
 import { headers } from 'next/headers';
 import { getCatalog } from '../lib/catalog';
-import { getSetting } from '../lib/db';
+import { db, getSetting } from '../lib/db';
 import { avatarUrl, discordConfigured, getUser, isAdmin } from '../lib/auth';
 import { ShopProvider } from '../components/Shop';
 import { Header, Footer } from '../components/Chrome';
 import { Brand } from '../components/Logo';
+import SpaceLayer from '../components/Space';
 
 const SITE = process.env.SITE_URL || 'http://localhost:3000';
 
@@ -62,12 +63,15 @@ export default async function RootLayout({ children }) {
     ? '⚠ Maintenance active : seuls les admins voient le site.'
     : custom || process.env.TOP_BANNER || (mode === 'demo' ? 'Boutique en préparation · ouverture des paiements très bientôt' : mode === 'error' ? 'Catalogue momentanément indisponible, réessayez dans quelques minutes.' : '');
   const u = user ? { name: user.username, avatar: avatarUrl(user) } : null;
+  const owned = user ? db().prepare(`SELECT DISTINCT oi.product_key k FROM order_items oi JOIN orders o ON o.id = oi.order_id
+    WHERE (o.user_id = ? OR o.discord_id = ?) AND o.status = 'paid'`).all(user.id, user.discord_id).map((r) => r.k) : [];
 
   return (
     <html lang="fr">
       {head}
       <body>
-        <ShopProvider products={products} mode={mode} user={u} loginRequired={discordConfigured() && !user}>
+        <SpaceLayer off={inAdmin} />
+        <ShopProvider products={products} mode={mode} user={u} owned={owned} loginRequired={discordConfigured() && !user}>
           {inAdmin ? children : (
             <>
               <Header banner={banner} user={u} admin={admin} canLogin={discordConfigured()} />

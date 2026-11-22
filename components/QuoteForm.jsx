@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 
-export function QuoteButton({ type, className, children }) {
+export function QuoteButton({ type, tier, className, children }) {
   const click = () => {
-    window.dispatchEvent(new CustomEvent('orion:quote', { detail: type }));
+    window.dispatchEvent(new CustomEvent('orion:quote', { detail: { type, tier } }));
     document.getElementById('devis')?.scrollIntoView({ behavior: 'smooth' });
   };
   return <button className={className} onClick={click}>{children}</button>;
@@ -17,7 +17,9 @@ export default function QuoteForm() {
 
   useEffect(() => {
     const on = (e) => {
-      setF((x) => ({ ...x, type: e.detail }));
+      const { type, tier } = typeof e.detail === 'string' ? { type: e.detail } : e.detail || {};
+      setF((x) => ({ ...x, type: type || x.type, budget: type === 'partenariat' ? 'Partenariat mensuel' : x.budget,
+        message: tier && !x.message.includes(tier) ? `Formule choisie : ${tier}\n${x.message}` : x.message }));
       setTimeout(() => document.getElementById('qDiscord')?.focus({ preventScroll: true }), 500);
     };
     window.addEventListener('orion:quote', on);

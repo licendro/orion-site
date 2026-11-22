@@ -1,8 +1,10 @@
 // Crée (ou met à jour) tout le serveur Discord Orion : rôles, catégories, salons, droits, messages.
 // Lancer :  npm run setup     (peut être relancé sans rien dupliquer)
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ path: new URL('./.env', import.meta.url).pathname });
+dotenv.config({ path: new URL('../.env', import.meta.url).pathname });
 import fs from 'node:fs';
-import { ChannelType, Client, Events, GatewayIntentBits, GuildDefaultMessageNotifications, GuildExplicitContentFilter, GuildVerificationLevel, PermissionFlagsBits } from 'discord.js';
+import { AutoModerationActionType, AutoModerationRuleEventType, AutoModerationRuleKeywordPresetType, AutoModerationRuleTriggerType, ChannelType, Client, Events, GatewayIntentBits, GuildDefaultMessageNotifications, GuildExplicitContentFilter, GuildVerificationLevel, PermissionFlagsBits } from 'discord.js';
 import { EVERYONE_PERMS, LAYOUT, ROLES, overwritesFor } from './structure.js';
 import { buildPost } from './messages.js';
 
@@ -186,7 +188,37 @@ async function run() {
   if (!hook) hook = await quotes.createWebhook({ name: 'Orion · Devis', avatar: `${(process.env.SITE_URL || 'https://jdev-hub.fr').replace(/\/+$/, '')}/logo.png`, reason: 'Formulaire de devis du site' }).catch(() => quotes.createWebhook({ name: 'Orion · Devis' }));
   cfg.quoteWebhook = hook.url;
 
-  // 6. Réglages du serveur
+  // 6. AutoMod Discord (filtrage natif, sans lire les messages)
+  log('\nAutoMod');
+  const alert = { type: AutoModerationActionType.SendAlertMessage, metadata: { channel: cfg.channels.modlogs || cfg.channels.logs } };
+  const block = (msg) => ({ type: AutoModerationActionType.BlockMessage, metadata: { customMessage: msg } });
+  const exempt = [cfg.roles.founder, cfg.roles.dev, cfg.roles.mod, cfg.roles.support].filter(Boolean);
+  const RULES = [
+    { name: 'Orion · Invitations Discord', triggerType: AutoModerationRuleTriggerType.Keyword,
+      triggerMetadata: { keywordFilter: ['*discord.gg/*', '*discord.com/invite/*', '*discordapp.com/invite/*', '*dsc.gg/*'] },
+      actions: [block('Les invitations vers d’autres serveurs ne sont pas autorisées ici.'), alert], exemptRoles: [...exempt, cfg.roles.partner].filter(Boolean) },
+    { name: 'Orion · Spam de mentions', triggerType: AutoModerationRuleTriggerType.MentionSpam,
+      triggerMetadata: { mentionTotalLimit: 5, mentionRaidProtectionEnabled: true },
+      actions: [block('Trop de mentions dans un seul message.'), alert, { type: AutoModerationActionType.Timeout, metadata: { durationSeconds: 600 } }], exemptRoles: exempt },
+    { name: 'Orion · Spam', triggerType: AutoModerationRuleTriggerType.Spam, actions: [block('Message bloqué : il ressemble à du spam.'), alert], exemptRoles: exempt },
+    { name: 'Orion · Insultes et contenu choquant', triggerType: AutoModerationRuleTriggerType.KeywordPreset,
+      triggerMetadata: { presets: [AutoModerationRuleKeywordPresetType.Slurs, AutoModerationRuleKeywordPresetType.SexualContent] },
+      actions: [block('Message bloqué : contenu interdit par le règlement.'), alert], exemptRoles: exempt },
+  ];
+  try {
+    const existing = await guild.autoModerationRules.fetch();
+    for (const r of RULES) {
+      const data = { ...r, eventType: AutoModerationRuleEventType.MessageSend, enabled: true, reason: 'Setup Orion' };
+      if (r.triggerType === AutoModerationRuleTriggerType.Spam) delete data.exemptRoles;
+      const found = existing.find((x) => x.name === r.name);
+      try {
+        if (found) { const { triggerType, ...edit } = data; await found.edit(edit); log(`  ✓ ${r.name}`); }
+        else { await guild.autoModerationRules.create(data); log(`  + ${r.name}`); }
+      } catch (e) { log(`  ⚠ ${r.name} : ${e.message}`); }
+    }
+  } catch (e) { log('  ⚠ AutoMod indisponible :', e.message); }
+
+  // 7. Réglages du serveur
   await guild.edit({
     verificationLevel: GuildVerificationLevel.Medium,
     explicitContentFilter: GuildExplicitContentFilter.AllMembers,

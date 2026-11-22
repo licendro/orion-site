@@ -97,6 +97,7 @@ export const LAYOUT = [
     { key: 'dev', name: '🛠️・dev', type: T, topic: 'Développement, idées, roadmap.' },
     { key: 'quotes', name: '🧾・devis', type: T, topic: 'Demandes de devis envoyées depuis le site.' },
     { key: 'logs', name: '📋・logs', type: T, topic: 'Arrivées, départs, actions du bot.' },
+    { key: 'modlogs', name: '🛡️・modération', type: T, topic: 'Sanctions, avertissements et alertes AutoMod.' },
     { key: 'transcripts', name: '🗂️・transcripts', type: T, topic: 'Historique des tickets fermés.' },
     { key: 'staffVoice', name: '🔒・Staff', type: V },
   ] },
