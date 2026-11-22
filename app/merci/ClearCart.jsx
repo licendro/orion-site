@@ -7,6 +7,7 @@ export default function ClearCart() {
     try {
       localStorage.removeItem('orion-cart-v1');
       localStorage.removeItem('orion-checkout-v1');
+      localStorage.removeItem('orion-fivem-v1');
     } catch { /* stockage indisponible */ }
   }, []);
   return null;

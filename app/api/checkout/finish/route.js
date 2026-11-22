@@ -1,5 +1,5 @@
 import { getCatalog } from '../../../../lib/catalog';
-import { addPackage, applyCoupon, getBasket, tebexEnabled } from '../../../../lib/tebex';
+import { addPackage, applyCoupon, getBasket, removePackage, tebexEnabled } from '../../../../lib/tebex';
 import { clientIp, json, rateLimited } from '../../../../lib/http';
 
 export const dynamic = 'force-dynamic';
@@ -23,8 +23,12 @@ export async function POST(req) {
   const warnings = [];
   try {
     let basket = await getBasket(ident);
-    if (basket.complete) return json({ error: 'Ce panier est déjà payé.' }, 409);
+    if (basket.complete) return json({ error: 'Ce panier est déjà payé. Reconnecte ton compte FiveM pour un nouvel achat.', relogin: true }, 409);
+    const wanted = new Set(chosen.map((p) => p.tebexId));
     const already = new Set((basket.packages || []).map((p) => p.id));
+    for (const p of basket.packages || []) {
+      if (!wanted.has(p.id)) await removePackage(ident, p.id).catch(() => {});
+    }
     for (const p of chosen) {
       if (!already.has(p.tebexId)) await addPackage(ident, p.ident || p.tebexId, 1);
     }
@@ -40,7 +44,8 @@ export async function POST(req) {
     basket = await getBasket(ident);
     return json({ checkoutUrl: basket.links?.checkout || null, total: basket.total_price, warnings });
   } catch (e) {
-    console.error('[checkout/finish]', e.message);
+    console.error('[checkout/finish]', e.status, e.message);
+    if (e.status === 404) return json({ error: 'Session FiveM expirée, reconnecte-toi.', relogin: true }, 409);
     return json({ error: `Tebex : ${e.message}` }, 502);
   }
 }
