@@ -2,7 +2,7 @@
 // Lancer :  npm run setup     (peut être relancé sans rien dupliquer)
 import 'dotenv/config';
 import fs from 'node:fs';
-import { ChannelType, Client, GatewayIntentBits, GuildDefaultMessageNotifications, GuildExplicitContentFilter, GuildVerificationLevel, PermissionFlagsBits } from 'discord.js';
+import { ChannelType, Client, Events, GatewayIntentBits, GuildDefaultMessageNotifications, GuildExplicitContentFilter, GuildVerificationLevel, PermissionFlagsBits } from 'discord.js';
 import { EVERYONE_PERMS, LAYOUT, ROLES, overwritesFor } from './structure.js';
 import { buildPost } from './messages.js';
 
@@ -20,7 +20,7 @@ const log = (...a) => console.log(...a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-client.once('ready', async () => {
+client.once(Events.ClientReady, async () => {
   try {
     await run();
     fs.writeFileSync(CONFIG, JSON.stringify(cfg, null, 2));
@@ -39,7 +39,10 @@ client.once('ready', async () => {
 });
 
 async function run() {
-  const guild = await client.guilds.fetch(GUILD_ID);
+  const guild = await client.guilds.fetch(GUILD_ID).catch(() => null);
+  if (!guild) {
+    throw new Error(`Le bot n'est pas sur le serveur ${GUILD_ID}. Invite-le avec : https://discord.com/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot%20applications.commands&guild_id=${GUILD_ID}`);
+  }
   const me = await guild.members.fetchMe();
   if (!me.permissions.has(PermissionFlagsBits.Administrator)) {
     throw new Error('Le bot doit avoir la permission Administrateur sur le serveur.');
