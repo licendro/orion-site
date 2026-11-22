@@ -1,4 +1,5 @@
 import { clientIp, json, rateLimited } from '../../../lib/http';
+import { db } from '../../../lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,6 @@ const noPing = (s) => s.replace(/@/g, '@​');
 
 export async function POST(req) {
   const hook = process.env.DISCORD_QUOTE_WEBHOOK;
-  if (!hook) return json({ error: 'Les demandes de devis passent par notre Discord pour le moment.' }, 503);
   const ip = clientIp(req) || 'local';
   if (rateLimited(`quote:${ip}`, 3, 10 * 60e3)) return json({ error: 'Trop de demandes, réessayez dans quelques minutes.' }, 429);
 
@@ -18,6 +18,10 @@ export async function POST(req) {
   const discord = clean(b.discord, 40);
   const message = String(b.message || '').trim().slice(0, 2000);
   if (!discord || message.length < 20) return json({ error: 'Pseudo Discord et description (20 caractères minimum) requis.' }, 400);
+
+  db().prepare('INSERT INTO quotes (discord, type, framework, budget, message) VALUES (?, ?, ?, ?, ?)')
+    .run(discord, TYPES[b.type] ? b.type : 'other', clean(b.framework, 30), clean(b.budget, 30), message);
+  if (!hook) return json({ ok: true });
 
   const payload = {
     username: 'Orion · Devis',

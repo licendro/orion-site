@@ -10,6 +10,10 @@ export default {
   reactStrictMode: true,
   poweredByHeader: false,
   eslint: { ignoreDuringBuilds: true },
+  experimental: {
+    serverComponentsExternalPackages: ['better-sqlite3'],
+    serverActions: { bodySizeLimit: '6mb' },
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

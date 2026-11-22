@@ -2,7 +2,14 @@
 
 Site vitrine et boutique d'Orion Scripts : Next.js 14, catalogue et paiement Tebex (Headless API + Tebex.js), formulaire de devis envoyé sur Discord.
 
-Partie 1 du cahier des charges (le site visible des clients). L'espace admin, la base de données et le bot Discord viendront ensuite.
+Contenu :
+- site public (catalogue, fiches, panier, paiement Tebex sans quitter le site, devis) ;
+- connexion Discord des clients (`/compte`), ajout automatique au serveur Discord ;
+- webhooks Tebex (`/api/webhooks/tebex`) : commandes, remboursements, litiges ;
+- espace admin (`/admin`) : produits, promotions + coupons Tebex, codes promo, commandes, clients, mises à jour, annonces Discord, devis, maintenance, réglages, journal ;
+- bot Discord (`discord/`) : règlement, notifications, tickets, rôle client, salon unique par client, annonces automatiques.
+
+Base de données : SQLite dans `data/orion.db` (partagée par le site et le bot, jamais versionnée).
 
 ## Fonctionnement
 

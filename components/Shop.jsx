@@ -23,7 +23,7 @@ function loadTebexJs() {
   });
 }
 
-export function ShopProvider({ products, mode, children }) {
+export function ShopProvider({ products, mode, user, loginRequired = false, children }) {
   const byKey = useMemo(() => new Map(products.map((p) => [p.key, p])), [products]);
   const pack = useMemo(() => products.find((p) => p.bundle.length) || null, [products]);
   const [cart, setCart] = useState([]);
@@ -104,12 +104,20 @@ export function ShopProvider({ products, mode, children }) {
   const checkout = useCallback(async () => {
     if (mode !== 'tebex') return toast('Les paiements ouvrent très bientôt. Rejoignez le Discord pour être prévenu.', true);
     if (!cart.length) return;
+    if (loginRequired) {
+      window.location.href = '/api/auth/discord?next=' + encodeURIComponent('/?panier=1');
+      return;
+    }
     setBusy(true);
     try {
       const r = await fetch('/api/checkout/start', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: cart }),
       });
       const j = await r.json();
+      if (r.status === 401 && j.login) {
+        window.location.href = '/api/auth/discord?next=' + encodeURIComponent('/?panier=1');
+        return;
+      }
       if (!r.ok) throw new Error(j.error || 'Erreur');
       write(PENDING, { ident: j.ident, items: cart, coupon, t: Date.now() });
       if (j.authUrl) window.location.href = j.authUrl; // connexion Cfx.re, puis retour sur le site
@@ -118,11 +126,16 @@ export function ShopProvider({ products, mode, children }) {
       toast(e.message || 'Le paiement n’a pas pu démarrer.', true);
       setBusy(false);
     }
-  }, [mode, cart, coupon, finish, toast]);
+  }, [mode, cart, coupon, finish, toast, loginRequired]);
 
   // Retour de la connexion Cfx.re : on reprend le paiement là où il s'était arrêté.
   useEffect(() => {
     const url = new URL(window.location.href);
+    if (url.searchParams.get('panier')) {
+      url.searchParams.delete('panier');
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+      setOpen(true);
+    }
     const ident = url.searchParams.get('checkout');
     if (!ident) return;
     url.searchParams.delete('checkout');
@@ -140,7 +153,7 @@ export function ShopProvider({ products, mode, children }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const value = { products, byKey, pack, mode, cart, inCart, toggle, remove, coupon, setCoupon, open, setOpen, busy, checkout, toast, lines, total };
+  const value = { products, byKey, pack, mode, user, loginRequired, cart, inCart, toggle, remove, coupon, setCoupon, open, setOpen, busy, checkout, toast, lines, total };
 
   return (
     <ShopCtx.Provider value={value}>
@@ -183,7 +196,7 @@ export function AddButton({ k, variant = 'card', className = '' }) {
 }
 
 function CartDrawer() {
-  const { open, setOpen, lines, remove, total, coupon, setCoupon, checkout, busy, mode, pack } = useShop();
+  const { open, setOpen, lines, remove, total, coupon, setCoupon, checkout, busy, mode, user, loginRequired } = useShop();
   const [code, setCode] = useState(coupon);
   useEffect(() => setCode(coupon), [coupon]);
   const saveCode = (e) => { e.preventDefault(); setCoupon(code.trim().toUpperCase()); };
@@ -223,13 +236,17 @@ function CartDrawer() {
             {coupon ? <div className="sum"><span>Code {coupon}</span><span style={{ color: 'var(--acc)' }}>appliqué au paiement</span></div> : null}
             <div className="sum big"><span>Total</span><b>{eur(total)}</b></div>
             {mode === 'tebex' ? (
-              <button className="btn pri" onClick={checkout} disabled={busy}>{busy ? 'Ouverture du paiement…' : 'Payer avec Tebex'}</button>
+              <>
+                {user ? <div className="who"><img src={user.avatar} alt="" width="22" height="22" style={{ borderRadius: '50%' }} />Connecté : <b>{user.name}</b></div> : null}
+                <button className="btn pri" onClick={checkout} disabled={busy}>
+                  {busy ? 'Ouverture du paiement…' : loginRequired ? 'Se connecter avec Discord pour payer' : 'Payer avec Tebex'}
+                </button>
+              </>
             ) : (
               <div className="warn">Les paiements ouvrent très bientôt. Votre panier est gardé sur cet appareil.</div>
             )}
             <span className="muted" style={{ fontSize: 12 }}>
               Connexion avec votre compte FiveM (Cfx.re) puis paiement sécurisé par Tebex. Licences livrées dans votre Keymaster.
-              {pack ? '' : ''}
             </span>
           </div>
         ) : null}

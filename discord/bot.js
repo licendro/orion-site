@@ -4,9 +4,10 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import {
   ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, ChannelType, Client, EmbedBuilder, Events,
-  GatewayIntentBits, MessageFlags, PermissionFlagsBits as P,
+  GatewayIntentBits, MessageFlags, PermissionFlagsBits as P, SlashCommandBuilder,
 } from 'discord.js';
 import { COLOR, NOTIF_ROLES, ROLES, TICKETS } from './structure.js';
+import { addJob, startJobs } from './jobs.js';
 
 const CONFIG = new URL('./config.json', import.meta.url);
 const loadCfg = () => JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
@@ -29,14 +30,31 @@ async function logTo(guild, key, embed) {
   } catch { /* salon absent */ }
 }
 
-client.once(Events.ClientReady, (c) => {
+let jobs = null;
+
+const COMMANDS = [
+  new SlashCommandBuilder().setName('mes-scripts').setDescription('Voir les scripts Orion que tu possèdes'),
+  new SlashCommandBuilder().setName('client').setDescription('Infos client (équipe)')
+    .setDefaultMemberPermissions(P.ManageMessages)
+    .addSubcommand((s) => s.setName('info').setDescription('Voir les achats d’un membre').addUserOption((o) => o.setName('membre').setDescription('Le membre').setRequired(true)))
+    .addSubcommand((s) => s.setName('resync').setDescription('Redonner le rôle Client et recréer son salon').addUserOption((o) => o.setName('membre').setDescription('Le membre').setRequired(true))),
+];
+
+client.once(Events.ClientReady, async (c) => {
   console.log(`✓ Bot connecté : ${c.user.tag}`);
   c.user.setPresence({ activities: [{ name: 'jdev-hub.fr', type: 3 }], status: 'online' });
+  jobs = startJobs(client, () => cfg);
+  try {
+    const guild = await c.guilds.fetch(process.env.GUILD_ID);
+    await guild.commands.set(COMMANDS.map((x) => x.toJSON()));
+    console.log('✓ Commandes /mes-scripts et /client enregistrées');
+  } catch (e) { console.error('Commandes :', e.message); }
 });
 
 // Arrivées / départs
 client.on(Events.GuildMemberAdd, (m) => {
   if (m.guild.id !== process.env.GUILD_ID) return;
+  jobs?.memberJoined();
   logTo(m.guild, 'logs', new EmbedBuilder().setColor(0x4ade80).setAuthor({ name: m.user.tag, iconURL: m.user.displayAvatarURL() })
     .setDescription(`📥 <@${m.id}> a rejoint le serveur\nCompte créé <t:${Math.floor(m.user.createdTimestamp / 1000)}:R>`).setTimestamp());
 });
@@ -49,6 +67,28 @@ client.on(Events.GuildMemberRemove, (m) => {
 client.on(Events.InteractionCreate, async (i) => {
   try {
     if (!i.inGuild()) return;
+
+    // Commandes slash
+    if (i.isChatInputCommand()) {
+      if (i.commandName === 'mes-scripts') {
+        const list = jobs?.owned(i.user.id) || [];
+        if (!list.length) return i.reply(ephemeral(`Aucun script lié à ton compte Discord. Achète sur ${(process.env.SITE_URL || 'https://jdev-hub.fr')} en étant connecté avec Discord, ou ouvre un ticket avec ton numéro de commande Tebex.`));
+        const { count, ...panel } = jobs.clientPanel(i.user.id);
+        return i.reply({ ...panel, flags: MessageFlags.Ephemeral });
+      }
+      if (i.commandName === 'client') {
+        if (!isStaff(i.member)) return i.reply(ephemeral('Réservé à l’équipe.'));
+        const target = i.options.getUser('membre', true);
+        if (i.options.getSubcommand() === 'resync') {
+          addJob('customer.resync', { discord_id: target.id });
+          return i.reply(ephemeral(`🔄 Resynchronisation de <@${target.id}> lancée.`));
+        }
+        const list = jobs?.owned(target.id) || [];
+        return i.reply({ flags: MessageFlags.Ephemeral, embeds: [new EmbedBuilder().setColor(COLOR).setTitle(`Client · ${target.tag}`)
+          .setDescription(list.length ? list.map((s) => `• **${s.name}**${s.version ? ` v${s.version}` : ''}`).join('\n') : 'Aucun achat lié à ce compte Discord.')] });
+      }
+      return;
+    }
 
     // Règlement accepté → rôle Membre
     if (i.isButton() && i.customId === 'orion:verify') {
