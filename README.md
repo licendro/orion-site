@@ -8,6 +8,7 @@ Partie 1 du cahier des charges (le site visible des clients). L'espace admin, la
 
 - **Catalogue** : lu depuis Tebex (`TEBEX_PUBLIC_TOKEN`), rafraîchi toutes les 5 minutes. Sans clé, le site affiche le catalogue de démonstration et le paiement est désactivé.
 - **Contenu enrichi** (`content/products.js`) : image, points forts, version… reliés à chaque package Tebex par son nom (ex. `orn_bank`). Un package absent du fichier s'affiche quand même, avec l'image et la description de Tebex.
+- **orn_lib** : dépendance livrée avec chaque script, jamais vendue ni affichée en boutique (cachée même si elle existe sur Tebex).
 - **Packs** : un package Tebex normal ; dans `content/products.js`, son entrée a un champ `bundle` avec la liste des scripts.
 - **Promotions** (`content/promotions.js`) : bandeau prix barré + pourcentage. Chaque promo doit avoir son coupon identique dans Tebex (champ `coupon`), appliqué automatiquement au paiement.
 - **Paiement** : panier Tebex créé côté serveur → connexion Cfx.re → retour sur le site → ajout des scripts et des coupons → fenêtre Tebex.js sans quitter le site.

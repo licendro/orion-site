@@ -1,9 +1,9 @@
 // Contenu enrichi des scripts : ce que Tebex ne stocke pas (image du site, points forts, version…).
 // En mode Tebex, chaque package est relié à une entrée par son nom (ex. « orn_bank »).
 // Sans clé Tebex, ces entrées servent de catalogue de démonstration (prix "demoPrice").
+// orn_lib n'est PAS un produit : c'est la dépendance livrée avec chaque script, il n'apparaît jamais en boutique.
 
 export const DEMO_CATEGORIES = [
-  { id: 1, name: 'Base' },
   { id: 2, name: 'Véhicules' },
   { id: 3, name: 'Économie' },
   { id: 4, name: 'Police' },
@@ -15,12 +15,7 @@ export const DEMO_CATEGORIES = [
 
 export const CONTENT = [
   {
-    name: 'orn_lib', cat: 1, demoPrice: 0, ver: '1.1.0', pop: 99, img: '/img/menu.jpg', pos: '0 0', featured: true,
-    desc: 'La base gratuite : menus, ciblage, zones, notifications et bridge framework.',
-    feat: ["Menus façon RageUI avec cadenas par job, grade, admin", "Ciblage ALT, zones, points d'interaction", 'Écrans plein écran sans HTML', 'Bridge ESX, QBCore, QBox et inventaires'],
-  },
-  {
-    name: 'orn_garage', cat: 2, demoPrice: 14.99, ver: '1.4.2', pop: 95, img: '/img/garage.jpg',
+    name: 'orn_garage', cat: 2, demoPrice: 14.99, ver: '1.4.2', pop: 95, img: '/img/garage.jpg', featured: true,
     desc: 'Garages publics et privés, fourrière, partage de clés et véhicules de société.',
     feat: ['Garages illimités configurables', 'Fourrière avec tarif par véhicule', 'Véhicules de service par job et grade', 'Partage de clés entre joueurs'],
   },

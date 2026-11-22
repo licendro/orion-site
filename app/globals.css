@@ -279,3 +279,4 @@ footer a:hover{color:var(--ink)}
 @media(max-width:600px){.toast{top:auto;bottom:16px}}
 .center{min-height:62vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:18px}
 @media(max-width:960px){.pp{grid-template-columns:minmax(0,1fr)}}
+.pill b{flex:none;white-space:nowrap}

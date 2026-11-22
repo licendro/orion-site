@@ -16,7 +16,6 @@ export default async function ProductPage({ params }) {
   if (!p) notFound();
   const { products } = await getCatalog();
   const bundleItems = p.bundle.map((k) => products.find((x) => x.key === k)).filter(Boolean);
-  const requiresLib = p.key !== 'ornlib' && products.some((x) => x.key === 'ornlib');
 
   return (
     <main className="band" style={{ paddingTop: 'clamp(40px,6vw,72px)' }}>
@@ -34,7 +33,7 @@ export default async function ProductPage({ params }) {
             ) : null}
             <dl className="spec">
               <dt>Frameworks</dt><dd>ESX, QBCore, QBox</dd>
-              <dt>Requis</dt><dd>{requiresLib ? <a href="/scripts/orn_lib">orn_lib (gratuit)</a> : 'Aucun'}</dd>
+              <dt>Inclus</dt><dd>orn_lib, la base commune des scripts Orion</dd>
               <dt>Protection</dt><dd>Escrow Cfx.re, configuration ouverte</dd>
               <dt>Mises à jour</dt><dd>Incluses à vie</dd>
               <dt>Livraison</dt><dd>Keymaster Cfx.re, juste après le paiement</dd>

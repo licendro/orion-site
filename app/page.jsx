@@ -32,7 +32,7 @@ function Spot({ p, rev, title, sub, list, children }) {
 export default async function Home() {
   const { products, categories, pack } = await getCatalog();
   const find = (k) => products.find((p) => p.key === k);
-  const lib = find('ornlib');
+  const police = find('ornpolice');
   const bank = find('ornbank');
   const shop = find('ornshop');
   const packItems = pack ? pack.bundle.map(find).filter(Boolean) : [];
@@ -44,12 +44,12 @@ export default async function Home() {
       <section className="hero">
         <canvas id="stars" aria-hidden="true"></canvas>
         <div className="wrap" style={{ position: 'relative' }}>
-          <a className="pill" href={lib ? `/scripts/${lib.slug}` : '#scripts'}><b>Nouveau</b>orn_lib 1.1 · ciblage, zones et écrans plein écran <span className="arrow">→</span></a>
+          {police ? <a className="pill" href={`/scripts/${police.slug}`}><b>Nouveau</b>orn_police · fouille, menottes et tablette de recherche <span className="arrow">→</span></a> : null}
           <h1>Une seule interface pour tout votre serveur. <span>Chaque script la parle.</span></h1>
           <p className="sub">Les scripts Orion partagent les mêmes menus, interactions et notifications. Installez-en un ou douze : votre serveur garde un rendu identique, sur ESX, QBCore ou QBox.</p>
           <div className="cta">
             <a className="btn pri" href="#scripts">Parcourir les scripts <span className="arrow">→</span></a>
-            {lib ? <AddButton k={lib.key} variant="" /> : null}
+            <a className="btn" href="#services">Un script sur mesure</a>
           </div>
         </div>
         <div className="stage">
@@ -71,7 +71,7 @@ export default async function Home() {
         <div className="wrap">
           <div className="head">
             <h2>Pensé comme une plateforme, pas comme une pile de scripts.</h2>
-            <p className="sub">orn_lib contient l'interface et la compatibilité. Chaque script s'appuie dessus : une mise à jour améliore tout votre catalogue Orion d'un coup.</p>
+            <p className="sub">Chaque script Orion est livré avec orn_lib, notre base commune : interface, ciblage, zones et compatibilité framework. Une mise à jour de la base améliore tous vos scripts Orion d'un coup.</p>
           </div>
           <div className="bento">
             <article className="tile t1">
@@ -191,7 +191,7 @@ export default async function Home() {
                 ['Optimisation', 'dès 30 €', 'Baisse du resmon, boucles et requêtes SQL trop lourdes.'],
                 ['Audit de sécurité', 'dès 35 €', "Recherche de backdoors, d'events exploitables et de triggers non protégés."],
                 ['Interface NUI sur mesure', 'dès 79 €', 'Menu, tablette ou écran complet dans le style de votre serveur.'],
-                ['Serveur clé en main', 'sur devis', 'Installation txAdmin, framework, base de données, suite ox, orn_lib et scripts configurés.'],
+                ['Serveur clé en main', 'sur devis', 'Installation txAdmin, framework, base de données, suite ox et scripts Orion configurés.'],
                 ['Site boutique relié à Tebex', 'dès 199 €', 'Votre propre site, produits Tebex affichés, paiement sans quitter la page.'],
                 ['Système complet', 'sur devis', 'Métier, économie, gouvernement, braquages : un ensemble de scripts pensé ensemble.'],
               ].map(([a, b, c]) => <div className="rw" key={a}><b>{a}</b><span className="p">{b}</span><span className="d">{c}</span></div>)}
@@ -219,7 +219,7 @@ export default async function Home() {
             <details open><summary>Comment je reçois mes scripts ?</summary><p>Après le paiement, ils apparaissent dans votre Keymaster sur portal.cfx.re, liés au compte FiveM utilisé à la connexion, dans la section « Granted assets ».</p></details>
             <details><summary>Pourquoi se connecter avec FiveM ?</summary><p>Les scripts sont protégés par l'escrow Cfx.re. La connexion relie l'achat à votre compte, sans quoi la licence ne peut pas être attribuée.</p></details>
             <details><summary>Quels frameworks sont compatibles ?</summary><p>ESX Legacy, QBCore et QBox, détectés automatiquement. Inventaires : ox_inventory, qs-inventory, qb-inventory.</p></details>
-            <details><summary>Faut-il installer orn_lib ?</summary><p>Oui. Il est gratuit et se lance avant nos scripts avec une ligne dans le server.cfg. C'est lui qui garde la même interface partout.</p></details>
+            <details><summary>C'est quoi orn_lib, livré avec les scripts ?</summary><p>La base commune de tous nos scripts : menus, ciblage, zones, notifications et compatibilité ESX, QBCore, QBox. Elle est fournie avec chaque script, ne se vend pas à part et ne sert qu'aux scripts Orion. Il suffit de la démarrer avant eux dans le server.cfg.</p></details>
             <details><summary>Comment marche un partenariat ?</summary><p>On fixe ensemble une formule entre 20 et 200 € par mois selon la taille du serveur et ce dont vous avez besoin. Vous pouvez l'ajuster ou l'arrêter chaque mois.</p></details>
             <details><summary>Comment se passe une commande sur mesure ?</summary><p>Devis gratuit sous 24 h, acompte de 50 %, test sur votre serveur, puis solde et livraison. Les 30 jours suivants, les corrections sont gratuites. Le code livré sur mesure vous appartient.</p></details>
             <details><summary>Je peux modifier le code ?</summary><p>La configuration, les textes et les fichiers d'ouverture (client/open.lua, server/open.lua) sont modifiables. Le cœur du script reste protégé.</p></details>
@@ -230,11 +230,11 @@ export default async function Home() {
       <section className="final band">
         <div className="arc" aria-hidden="true"></div>
         <div className="wrap">
-          <h2>Commencez par la base. Elle est gratuite.</h2>
-          <p className="sub">Installez orn_lib, essayez l'exemple fourni, et ajoutez les scripts quand votre serveur en a besoin.</p>
+          <h2>Un script suffit pour commencer.</h2>
+          <p className="sub">Ajoutez les autres quand votre serveur en a besoin : ils partagent la même base, donc la même interface, sans rien reconfigurer.</p>
           <div className="cta">
-            {lib ? <AddButton k={lib.key} variant="pri" /> : null}
-            <a className="btn" href="#scripts">Voir le catalogue</a>
+            <a className="btn pri" href="#scripts">Voir le catalogue</a>
+            <a className="btn" href="#devis">Demander un devis</a>
           </div>
         </div>
       </section>

@@ -33,7 +33,7 @@ export function Footer({ discord }) {
           <Brand style={{ padding: 0 }} />
           <p className="muted" style={{ margin: 0, fontSize: 14, maxWidth: 300 }}>Studio de scripts FiveM. Paiements par Tebex, licences par Cfx.re Keymaster.</p>
         </div>
-        <div><h5>Boutique</h5><a href="/#scripts">Tous les scripts</a><a href="/#pack">Packs</a><a href="/scripts/orn_lib">orn_lib</a></div>
+        <div><h5>Boutique</h5><a href="/#scripts">Tous les scripts</a><a href="/#pack">Packs</a><a href="/#plateforme">Plateforme</a></div>
         <div><h5>Services</h5><a href="/#services">Sur mesure</a><a href="/#services">Partenariat serveur</a><a href="/#services">Bot Discord</a><a href="/#devis">Demander un devis</a></div>
         <div><h5>Aide</h5><a href="/#faq">FAQ</a><a href="/#faq">Installation</a><a href="/#faq">Mises à jour</a></div>
         <div><h5>Communauté</h5><a href={discord} rel="noopener" target="_blank">Discord</a><a href="https://portal.cfx.re" rel="noopener" target="_blank">Keymaster</a></div>
