@@ -9,7 +9,6 @@ export function Header({ banner, user, admin, canLogin }) {
         <div className="wrap">
           <Brand />
           <nav className="links" aria-label="Sections">
-            <a href="/#plateforme">Plateforme</a>
             <a href="/#scripts">Scripts</a>
             <a href="/#pack">Packs</a>
             <a href="/services">Services</a>
@@ -42,7 +41,7 @@ export function Footer({ discord }) {
           <Brand style={{ padding: 0 }} />
           <p className="muted" style={{ margin: 0, fontSize: 14, maxWidth: 300 }}>Studio de scripts FiveM. Paiements par Tebex, licences par Cfx.re Keymaster.</p>
         </div>
-        <div><h5>Boutique</h5><a href="/#scripts">Tous les scripts</a><a href="/#pack">Packs</a><a href="/scripts/orn_lib">orn_lib (gratuit)</a></div>
+        <div><h5>Boutique</h5><a href="/#scripts">Tous les scripts</a><a href="/#pack">Packs</a><a href="/compte">Mes scripts</a></div>
         <div><h5>Services</h5><a href="/services#sur-mesure">Sur mesure</a><a href="/services#partenariat">Développeur partenaire</a><a href="/services#bot">Bot Discord</a><a href="/services#devis">Demander un devis</a></div>
         <div><h5>Aide</h5><a href="/#faq">FAQ</a><a href="/compte">Mon compte</a><a href="/mentions-legales">Mentions légales</a></div>
         <div><h5>Communauté</h5><a href={discord} rel="noopener" target="_blank">Discord</a><a href="https://portal.cfx.re" rel="noopener" target="_blank">Keymaster</a></div>

@@ -112,33 +112,109 @@ export default function SpaceLayer({ off }) {
           trail = trail.filter((p) => p.life < 40);
         }
       }
+      if (!RM) sim(now);
       g.globalAlpha = 1;
       raf = requestAnimationFrame(frame);
     };
-    raf = requestAnimationFrame(frame);
 
-    // Fusée Orion qui traverse l'écran de temps en temps
-    let rocketTimer = 0, anim = null;
-    const flyRocket = () => {
-      const el = rocket.current;
-      if (!el || document.hidden) return schedule();
-      const ltr = Math.random() < 0.6;
-      const y0 = H * (0.15 + Math.random() * 0.6);
-      const y1 = y0 + (Math.random() - 0.5) * H * 0.5;
-      const x0 = ltr ? -240 : W + 240, x1 = ltr ? W + 240 : -240;
-      const ang = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI;
-      const scale = 0.45 + Math.random() * 0.35;
-      el.style.display = 'block';
-      anim = el.animate([
-        { transform: `translate(${x0}px, ${y0}px) rotate(${ang}deg) scale(${scale})`, opacity: 0 },
-        { opacity: 1, offset: 0.08 },
-        { opacity: 1, offset: 0.92 },
-        { transform: `translate(${x1}px, ${y1}px) rotate(${ang}deg) scale(${scale})`, opacity: 0 },
-      ], { duration: 9000 + Math.random() * 5000, easing: 'linear' });
-      anim.onfinish = () => { el.style.display = 'none'; schedule(); };
+    // ----- Fusée Orion : elle flâne dans les marges, à l'écart du texte, et esquive les astéroïdes -----
+    const CONTENT = 1260;                     // largeur occupée par le contenu du site
+    const gutter = () => Math.max(0, (W - CONTENT) / 2);
+    const MIN_GUTTER = 150;                   // en dessous (téléphone, portable) : couloir étroit au bord de l'écran
+    const wide = () => gutter() >= MIN_GUTTER;
+    // Couloir de vol d'un côté : les marges sur grand écran, une bande de 26 px au bord sinon.
+    const lane = (side) => {
+      const gw = gutter();
+      const [a, b2] = wide() ? [30, gw - 30] : [8, 30];
+      return side < 0 ? [a, b2] : [W - b2, W - a];
     };
-    const schedule = () => { rocketTimer = setTimeout(flyRocket, 16000 + Math.random() * 22000); };
-    if (!RM) rocketTimer = setTimeout(flyRocket, 6000);
+    let rocks = [];
+    const makeRock = (side, y) => {
+      const r = wide() ? 7 + Math.random() * 16 : 3 + Math.random() * 4;
+      const n = 7 + (Math.random() * 4 | 0);
+      const pts = Array.from({ length: n }, (_, k) => { const a = (k / n) * 6.283; const d = r * (0.72 + Math.random() * 0.38); return [Math.cos(a) * d, Math.sin(a) * d]; });
+      const [lo, hi] = lane(side);
+      return { side, x: lo + Math.random() * (hi - lo), y: y ?? Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.15, vy: 0.08 + Math.random() * 0.25, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.01, r, pts };
+    };
+    const seedRocks = () => {
+      rocks = [];
+      const per = wide() ? Math.max(3, Math.round(H / 230)) : 2;
+      for (const side of [-1, 1]) for (let k = 0; k < per; k++) rocks.push(makeRock(side));
+    };
+    seedRocks();
+    addEventListener('resize', seedRocks);
+
+    const ship = { on: false, x: 0, y: 0, vx: 0, vy: 0, heading: 0, wander: 0, side: -1, scale: 0.42, next: performance.now() + 4000 };
+    const el = rocket.current;
+
+    const launch = () => {
+      if (document.hidden) { ship.next = performance.now() + 8000; return; }
+      ship.side = Math.random() < 0.5 ? -1 : 1;
+      const up = Math.random() < 0.6;
+      const [l0, l1] = lane(ship.side);
+      ship.x = (l0 + l1) / 2;
+      ship.y = up ? H + 60 : -60;
+      ship.heading = up ? -Math.PI / 2 : Math.PI / 2;
+      ship.vx = 0; ship.vy = up ? -1.6 : 1.6;
+      ship.wander = 0;
+      ship.scale = wide() ? Math.min(0.5, (gutter() - 40) / 200) : 0.24;
+      ship.on = true;
+      if (el) el.style.display = 'block';
+    };
+
+    function sim(now) {
+      // Astéroïdes
+      {
+        for (const r of rocks) {
+          r.x += r.vx; r.y += r.vy; r.rot += r.vr;
+          const [lo, hi] = lane(r.side);
+          if (r.x < lo || r.x > hi) r.vx *= -1;
+          if (r.y - r.r > H) Object.assign(r, makeRock(r.side, -r.r - 10));
+          g.save(); g.translate(r.x, r.y); g.rotate(r.rot);
+          g.beginPath(); r.pts.forEach(([px, py], k) => (k ? g.lineTo(px, py) : g.moveTo(px, py))); g.closePath();
+          const sh = g.createRadialGradient(-r.r * 0.4, -r.r * 0.4, 1, 0, 0, r.r * 1.2);
+          sh.addColorStop(0, '#4a4f5c'); sh.addColorStop(1, '#16181f');
+          g.globalAlpha = 0.85; g.fillStyle = sh; g.fill();
+          g.globalAlpha = 0.35; g.strokeStyle = '#7e8492'; g.lineWidth = 0.8; g.stroke();
+          g.globalAlpha = 0.5; g.fillStyle = '#0b0c11';
+          g.beginPath(); g.arc(r.r * 0.2, r.r * 0.1, r.r * 0.18, 0, 6.283); g.fill();
+          g.restore();
+        }
+      }
+      // Fusée
+      if (!ship.on) {
+        if (now > ship.next) launch();
+        return;
+      }
+      // Errance : le cap tourne doucement au hasard
+      ship.wander += (Math.random() - 0.5) * 0.35;
+      ship.wander *= 0.96;
+      let ax = Math.cos(ship.heading + ship.wander) * 0.06, ay = Math.sin(ship.heading + ship.wander) * 0.06;
+      // Rester dans son couloir (sur petit écran, le cap reste presque vertical)
+      const [lo, hi] = lane(ship.side);
+      const pad = Math.min(25, (hi - lo) / 3);
+      if (ship.x < lo + pad) ax += 0.12; if (ship.x > hi - pad) ax -= 0.12;
+      if (!wide()) { ship.wander *= 0.8; ax *= 0.3; }
+      // Esquive des astéroïdes
+      for (const r of rocks) {
+        const dx = ship.x - r.x, dy = ship.y - r.y, d = Math.hypot(dx, dy), safe = r.r + (wide() ? 70 : 30);
+        if (d < safe && d > 0.1) { const f = ((safe - d) / safe) * 0.5; ax += (dx / d) * f; ay += (dy / d) * f; }
+      }
+      ship.vx = (ship.vx + ax) * 0.985; ship.vy = (ship.vy + ay) * 0.985;
+      const sp = Math.hypot(ship.vx, ship.vy), max = 2.4, min = 0.9;
+      if (sp > max) { ship.vx *= max / sp; ship.vy *= max / sp; }
+      if (sp < min && sp > 0) { ship.vx *= min / sp; ship.vy *= min / sp; }
+      ship.x = Math.min(hi, Math.max(lo, ship.x + ship.vx));
+      ship.y += ship.vy;
+      const ang = Math.atan2(ship.vy, ship.vx) * 180 / Math.PI;
+      if (el) el.style.transform = `translate(${ship.x}px, ${ship.y}px) rotate(${ang}deg) scale(${ship.scale})`;
+      if (ship.y < -140 || ship.y > H + 140) {
+        ship.on = false; if (el) el.style.display = 'none';
+        ship.next = now + 12000 + Math.random() * 18000;
+      }
+    }
+    raf = requestAnimationFrame(frame);
 
     // Curseur spatial (souris uniquement)
     const cur = cursor.current;
@@ -171,7 +247,7 @@ export default function SpaceLayer({ off }) {
     }
 
     return () => {
-      alive = false; cancelAnimationFrame(raf); cancelAnimationFrame(craf); clearTimeout(rocketTimer); anim?.cancel();
+      alive = false; cancelAnimationFrame(raf); cancelAnimationFrame(craf); removeEventListener('resize', seedRocks);
       removeEventListener('resize', resize); removeEventListener('mousemove', onMove); removeEventListener('mouseover', onOver);
       document.removeEventListener('mouseleave', onLeave); removeEventListener('mousedown', onDown); removeEventListener('mouseup', onUp);
       document.documentElement.classList.remove('orn-cursor');

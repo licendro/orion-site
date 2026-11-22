@@ -16,12 +16,12 @@ export const DEMO_CATEGORIES = [
 
 export const CONTENT = [
   {
-    name: 'orn_lib', cat: 1, demoPrice: 0, ver: '1.1.0', pop: 100, img: '/img/menu.jpg', pos: '0 0', featured: true, required: true,
-    desc: 'La base gratuite et obligatoire de tous nos scripts : menus, interactions, ciblage, notifications et compatibilité framework.',
-    feat: ['Menus façon RageUI, aussi complexes que nécessaire', 'Ciblage ALT, zones et points d’interaction', 'Écrans plein écran (cartes, tablettes, banques…)', 'Compatibilité ESX, QBCore, QBox et inventaires', 'Évolue avec chaque nouveau script'],
+    name: 'orn_lib', cat: 1, demoPrice: 0, ver: '1.1.0', pop: 1, img: '/img/menu.jpg', pos: '0 0', required: true,
+    desc: 'Package gratuit et obligatoire, requis par tous nos scripts.',
+    feat: ['Requis par tous les scripts Orion', 'Compatibilité ESX, QBCore, QBox et inventaires', 'Ajouté automatiquement et gratuitement au panier', 'Mis à jour avec chaque nouveau script'],
   },
   {
-    name: 'orn_garage', cat: 2, demoPrice: 14.99, ver: '1.4.2', pop: 95, img: '/img/garage.jpg',
+    name: 'orn_garage', cat: 2, demoPrice: 14.99, ver: '1.4.2', pop: 95, img: '/img/garage.jpg', featured: true,
     desc: 'Garages publics et privés, fourrière, partage de clés et véhicules de société.',
     feat: ['Garages illimités configurables', 'Fourrière avec tarif par véhicule', 'Véhicules de service par job et grade', 'Partage de clés entre joueurs'],
   },
