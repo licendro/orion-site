@@ -1,0 +1,15 @@
+{
+  "name": "orion-discord",
+  "version": "1.0.0",
+  "description": "Setup et bot du Discord Orion",
+  "scripts": {
+    "setup": "node setup.js",
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.28.1",
+    "dotenv": "^16.6.1"
+  },
+  "private": true,
+  "type": "module"
+}
