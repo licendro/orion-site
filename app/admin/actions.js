@@ -25,7 +25,7 @@ function parisIso(local) {
   const utc = new Date(guess.toLocaleString('en-US', { timeZone: 'UTC' }));
   return new Date(guess.getTime() - (paris - utc)).toISOString();
 }
-const go = (path, msg, err) => redirect(`${path}?${err ? 'err' : 'ok'}=${encodeURIComponent(msg)}`);
+const go = (path, msg, err) => redirect(`${path}?${err ? 'err' : 'ok'}=${encodeURIComponent(msg)}#flash`);
 
 // ---------- Produits ----------
 export async function saveProduct(fd) {
@@ -86,7 +86,10 @@ export async function createPromotion(fd) {
   const value = Number(String(fd.get('value')).replace(',', '.'));
   const keys = fd.getAll('keys').map(String);
   const scope = fd.get('scope') === 'selected' ? keys.join(',') : 'all';
-  if (!name || !(value > 0) || (type === 'percent' && value >= 100) || !scope) go('/admin/promotions', 'Nom, valeur et produits obligatoires.', true);
+  if (!name) go('/admin/promotions', 'Donne un nom à la promotion (ex. Black Friday).', true);
+  if (!(value > 0)) go('/admin/promotions', 'La valeur doit être supérieure à 0.', true);
+  if (type === 'percent' && value > 100) go('/admin/promotions', 'Un pourcentage ne peut pas dépasser 100 %.', true);
+  if (!scope) go('/admin/promotions', 'Coche au moins un produit, ou choisis « Tous les produits ».', true);
   const starts = str(fd, 'starts', 30) || null;
   const ends = str(fd, 'ends', 30) || null;
   let coupon = str(fd, 'coupon', 40).toUpperCase() || null;
@@ -141,7 +144,8 @@ export async function createCode(fd) {
   const code = str(fd, 'code', 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
   const type = fd.get('type') === 'fixed' ? 'fixed' : 'percent';
   const value = Number(String(fd.get('value')).replace(',', '.'));
-  if (!code || !(value > 0)) go('/admin/codes', 'Code et valeur obligatoires.', true);
+  if (!code) go('/admin/codes', 'Indique le code (lettres et chiffres).', true);
+  if (!(value > 0) || (type === 'percent' && value > 100)) go('/admin/codes', 'Valeur invalide (entre 0 et 100 % pour un pourcentage).', true);
   const keys = fd.getAll('keys').map(String);
   const { products } = await getFullCatalog();
   const ids = fd.get('scope') === 'selected' ? products.filter((p) => keys.includes(p.key) && p.tebexId).map((p) => p.tebexId) : [];

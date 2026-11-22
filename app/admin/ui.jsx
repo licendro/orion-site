@@ -9,8 +9,9 @@ export function Head({ title, sub, children }) {
 }
 
 export function Flash({ searchParams }) {
-  if (searchParams?.ok) return <div className="flash" role="status">{searchParams.ok}</div>;
-  if (searchParams?.err) return <div className="flash err" role="alert">{searchParams.err}</div>;
+  // id="flash" + #flash dans l'URL : la page défile jusqu'au message, même sur téléphone.
+  if (searchParams?.ok) return <div id="flash" className="flash" role="status">✓ {searchParams.ok}</div>;
+  if (searchParams?.err) return <div id="flash" className="flash err" role="alert">⚠ {searchParams.err}</div>;
   return null;
 }
 

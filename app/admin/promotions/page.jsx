@@ -18,7 +18,7 @@ export default async function Promotions({ searchParams }) {
 
       <div className="panel">
         <h2>Nouvelle promotion</h2>
-        <form action={createPromotion} className="pb frm">
+        <form action={createPromotion} className="pb frm" noValidate>
           <label>Nom<input className="field" name="name" required maxLength={60} placeholder="Black Friday" /></label>
           <label>Texte du bandeau<input className="field" name="banner" maxLength={60} placeholder="Black Friday · jusqu’à dimanche" /></label>
           <label>Type<select className="field" name="type"><option value="percent">Pourcentage (%)</option><option value="fixed">Montant fixe (€)</option></select></label>

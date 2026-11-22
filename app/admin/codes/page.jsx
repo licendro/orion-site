@@ -24,7 +24,7 @@ export default async function Codes({ searchParams }) {
       {enabled ? (
         <div className="panel">
           <h2>Nouveau code</h2>
-          <form action={createCode} className="pb frm">
+          <form action={createCode} className="pb frm" noValidate>
             <label>Code<input className="field mono" name="code" required maxLength={40} placeholder="ORION10" /></label>
             <label>Type<select className="field" name="type"><option value="percent">Pourcentage (%)</option><option value="fixed">Montant fixe (€)</option></select></label>
             <label>Valeur<input className="field" name="value" required inputMode="decimal" placeholder="10" /></label>
