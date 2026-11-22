@@ -35,7 +35,7 @@ export async function POST(req) {
     const link = list.find((l) => /fivem|cfx/i.test(l.name || '')) || list[0];
     return json({ ident: basket.ident, authUrl: link?.url || null });
   } catch (e) {
-    console.error('[checkout/start]', e.message);
-    return json({ error: 'Tebex ne répond pas, réessayez dans un instant.' }, 502);
+    console.error('[checkout/start]', e.status, e.message);
+    return json({ error: `Tebex : ${e.message}` }, 502);
   }
 }

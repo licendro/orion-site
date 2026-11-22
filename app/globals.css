@@ -342,3 +342,14 @@ footer a:hover{color:var(--ink)}
 .stats.s3{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:900px){.adm-nav a{flex:none}.stats.s3{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .flash{scroll-margin-top:16px}
+/* Pseudo Discord long : coupé proprement, masqué sur téléphone */
+.userchip .full{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
+.navr{flex:none}
+@media(max-width:600px){
+ .userchip .full{display:none}
+ .userchip{padding:0 9px}
+ .nav .wrap{gap:12px}
+ .brand span{font-size:12px;letter-spacing:.16em}
+ .navr .btn.sm{padding:0 10px}
+}
+@media(max-width:380px){.brand span{display:none}}
