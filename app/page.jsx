@@ -71,7 +71,7 @@ export default async function Home() {
         <div className="wrap">
           <div className="head">
             <h2>Pensé comme une plateforme, pas comme une pile de scripts.</h2>
-            <p className="sub">Chaque script Orion est livré avec orn_lib, notre base commune : interface, ciblage, zones et compatibilité framework. Une mise à jour de la base améliore tous vos scripts Orion d'un coup.</p>
+            <p className="sub">Nos scripts sont conçus ensemble : même interface, mêmes réflexes pour vos joueurs, compatibles ESX, QBCore et QBox sans rien adapter.</p>
           </div>
           <div className="bento">
             <article className="tile t1">
@@ -88,8 +88,8 @@ export default async function Home() {
               <div className="stack" id="stack" aria-live="off"></div>
             </article>
             <article className="tile t4">
-              <div className="txt"><h3>Trois lignes pour un menu</h3></div>
-              <pre className="code"><b>Orion</b>.Menu.register('garage', {'{'}{'\n'}  title = 'GARAGE',{'\n'}  items = {'{'} {'{'} label = 'Sortir',{'\n'}    lock = {'{'} job = {'{'} police = <em>2</em> {'}'} {'}'} {'}'} {'}'},{'\n'}{'}'}){'\n'}<span className="caret"></span></pre>
+              <div className="txt"><h3>Configuration ouverte</h3></div>
+              <pre className="code"><b>Config</b>.Garages = {'{'}{'\n'}  {'{'} label = 'Pillbox',{'\n'}    jobs = {'{'} police = <em>2</em> {'}'},{'\n'}    fourriere = <em>450</em> {'}'},{'\n'}{'}'}{'\n'}<span className="caret"></span></pre>
             </article>
             <article className="tile t5">
               <div className="txt"><h3>Détecté tout seul</h3><p>Framework, inventaire, ciblage, téléphone, dispatch.</p></div>
@@ -219,7 +219,6 @@ export default async function Home() {
             <details open><summary>Comment je reçois mes scripts ?</summary><p>Après le paiement, ils apparaissent dans votre Keymaster sur portal.cfx.re, liés au compte FiveM utilisé à la connexion, dans la section « Granted assets ».</p></details>
             <details><summary>Pourquoi se connecter avec FiveM ?</summary><p>Les scripts sont protégés par l'escrow Cfx.re. La connexion relie l'achat à votre compte, sans quoi la licence ne peut pas être attribuée.</p></details>
             <details><summary>Quels frameworks sont compatibles ?</summary><p>ESX Legacy, QBCore et QBox, détectés automatiquement. Inventaires : ox_inventory, qs-inventory, qb-inventory.</p></details>
-            <details><summary>C'est quoi orn_lib, livré avec les scripts ?</summary><p>La base commune de tous nos scripts : menus, ciblage, zones, notifications et compatibilité ESX, QBCore, QBox. Elle est fournie avec chaque script, ne se vend pas à part et ne sert qu'aux scripts Orion. Il suffit de la démarrer avant eux dans le server.cfg.</p></details>
             <details><summary>Comment marche un partenariat ?</summary><p>On fixe ensemble une formule entre 20 et 200 € par mois selon la taille du serveur et ce dont vous avez besoin. Vous pouvez l'ajuster ou l'arrêter chaque mois.</p></details>
             <details><summary>Comment se passe une commande sur mesure ?</summary><p>Devis gratuit sous 24 h, acompte de 50 %, test sur votre serveur, puis solde et livraison. Les 30 jours suivants, les corrections sont gratuites. Le code livré sur mesure vous appartient.</p></details>
             <details><summary>Je peux modifier le code ?</summary><p>La configuration, les textes et les fichiers d'ouverture (client/open.lua, server/open.lua) sont modifiables. Le cœur du script reste protégé.</p></details>

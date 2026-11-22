@@ -33,7 +33,6 @@ export default async function ProductPage({ params }) {
             ) : null}
             <dl className="spec">
               <dt>Frameworks</dt><dd>ESX, QBCore, QBox</dd>
-              <dt>Inclus</dt><dd>orn_lib, la base commune des scripts Orion</dd>
               <dt>Protection</dt><dd>Escrow Cfx.re, configuration ouverte</dd>
               <dt>Mises à jour</dt><dd>Incluses à vie</dd>
               <dt>Livraison</dt><dd>Keymaster Cfx.re, juste après le paiement</dd>
