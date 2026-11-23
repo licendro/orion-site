@@ -29,5 +29,11 @@ if [ -f discord/.env ]; then
 fi
 pm2 save >/dev/null
 
+# Surveillance toutes les 2 minutes (alertes dans le salon 🚨 alertes du Discord)
+if ! crontab -l 2>/dev/null | grep -q '/api/monitor'; then
+  (crontab -l 2>/dev/null; echo "*/2 * * * * curl -fsS http://127.0.0.1:${PORT:-3000}/api/monitor >/dev/null 2>&1") | crontab -
+  echo "→ Surveillance automatique installée"
+fi
+
 sleep 4
 curl -fsS "http://127.0.0.1:${PORT:-3000}/api/health" && echo && echo "✓ Site et bot à jour"

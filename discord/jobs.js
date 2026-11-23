@@ -3,13 +3,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, EmbedBuilder, PermissionFlagsBits as P } from 'discord.js';
-import { SCHEMA } from '../db/schema.mjs';
+import { SCHEMA, migrate } from '../db/schema.mjs';
 import { COLOR, ROLES } from './structure.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const db = new Database(process.env.DATABASE_PATH || path.resolve(here, '../data/orion.db'));
 db.pragma('busy_timeout = 5000');
 db.exec(SCHEMA);
+migrate(db);
 
 const site = () => (process.env.SITE_URL || 'https://jdev-hub.fr').replace(/\/+$/, '');
 const logo = () => `${site()}/logo.png`;
@@ -233,6 +234,36 @@ export function startJobs(client, getCfg) {
       });
     },
 
+    async 'partner.started'({ discord_id, name }) {
+      await log(`🤝 Nouvel abonnement partenaire : ${discord_id ? `<@${discord_id}>` : 'client sans Discord'} · **${name || 'formule'}**`, 0x6eaaff);
+      if (!discord_id) return;
+      const m = await member(discord_id);
+      if (cfg().roles.partner) await m.roles.add(cfg().roles.partner, 'Abonnement partenaire');
+      await m.send({ embeds: [new EmbedBuilder().setColor(COLOR).setTitle('Bienvenue parmi les partenaires Orion')
+        .setDescription(`Merci pour ton abonnement **${name || ''}** ! Tu as maintenant le rôle 🤝 Partenaire sur notre Discord.\n\nOuvre un ticket « Partenariat serveur » pour qu’on organise l’accès à ton serveur et tes premières demandes.`)] }).catch(() => {});
+    },
+
+    async 'partner.ended'({ discord_id, name }) {
+      await log(`🤝 Fin d’abonnement : ${discord_id ? `<@${discord_id}>` : 'client sans Discord'} · **${name || 'formule'}**`, 0x9aa0ad);
+      if (!discord_id) return;
+      const still = db.prepare("SELECT COUNT(*) n FROM subscriptions WHERE discord_id = ? AND status IN ('active','cancelling')").get(discord_id).n;
+      if (still) return;
+      const m = await guild().members.fetch(discord_id).catch(() => null);
+      if (m && cfg().roles.partner) await m.roles.remove(cfg().roles.partner, 'Fin de l’abonnement partenaire');
+    },
+
+    async 'test.ready'({ discord_id, minutes, connect }) {
+      const u = await client.users.fetch(discord_id).catch(() => null);
+      if (!u) return;
+      const url = !connect ? `${site()}/essai` : connect.startsWith('cfx.re/join/') ? `https://${connect}` : `${site()}/essai`;
+      await u.send({ embeds: [new EmbedBuilder().setColor(COLOR).setTitle('🎮 C’est ton tour sur le serveur de test')
+        .setDescription(`Ta place est réservée pendant **${minutes} minutes**. Connecte-toi maintenant : ${url}\n\nUne fois fini, libère ta place sur ${site()}/essai pour la personne suivante.`)] }).catch(() => {});
+    },
+
+    async 'announce.staff'({ title, text }) {
+      await (await channel('staffChat')).send({ embeds: [new EmbedBuilder().setColor(COLOR).setTitle(title).setDescription(text).setTimestamp()] });
+    },
+
     async 'maintenance.changed'(p) {
       await (await channel('announcements')).send({ embeds: [new EmbedBuilder().setColor(p.on ? 0xff7a2f : 0x4ade80)
         .setTitle(p.on ? '🛠️ Boutique en maintenance' : '✅ Boutique de retour en ligne')
@@ -273,9 +304,32 @@ export function startJobs(client, getCfg) {
   setInterval(tick, 3000);
   setInterval(() => setSetting('bot_heartbeat', Date.now()), 60e3);
   setSetting('bot_heartbeat', Date.now());
-  // Réveille le site toutes les 5 min : il relit Tebex et détecte les nouveaux scripts à annoncer.
+  // Surveille le site chaque minute (et le réveille : il relit Tebex et détecte les nouveaux scripts).
   const port = process.env.SITE_PORT || 3000;
-  setInterval(() => fetch(`http://127.0.0.1:${port}/api/health`).catch(() => {}), 5 * 60e3);
+  let fails = 0, down = false, downSince = 0;
+  setInterval(async () => {
+    let ok = false;
+    try { const r = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(10000) }); ok = r.ok; } catch { /* hors ligne */ }
+    if (ok) {
+      if (down) {
+        down = false;
+        alert(0x4ade80, '✅ Site de nouveau en ligne', `Coupure d’environ ${Math.max(1, Math.round((Date.now() - downSince) / 60e3))} min.`);
+      }
+      fails = 0;
+      return;
+    }
+    if (++fails === 2 && !down) {
+      down = true; downSince = Date.now() - 60e3;
+      alert(0xe5484d, '🔴 Site hors ligne', `${process.env.SITE_URL || 'Le site'} ne répond plus depuis 2 minutes.\nSur le VPS : \`pm2 logs orion --lines 40\` puis \`pm2 restart orion\`.`);
+    }
+  }, 60e3);
+
+  async function alert(color, title, text) {
+    try {
+      const ch = await guild().channels.fetch(cfg().channels.alerts || cfg().channels.logs);
+      await ch.send({ embeds: [new EmbedBuilder().setColor(color).setTitle(title).setDescription(text).setTimestamp()] });
+    } catch { /* salon absent */ }
+  }
 
   return {
     // Un membre arrive : on reprend les achats qui l'attendaient.

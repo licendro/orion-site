@@ -3,28 +3,34 @@
 import { usePathname } from 'next/navigation';
 
 const LINKS = [
-  ['/admin', 'Tableau de bord'],
+  ['/admin', 'Tableau de bord', 'dashboard'],
   ['sep', 'Boutique'],
-  ['/admin/produits', 'Produits'],
-  ['/admin/promotions', 'Promotions'],
-  ['/admin/codes', 'Codes promo'],
-  ['/admin/commandes', 'Commandes'],
-  ['/admin/clients', 'Clients'],
+  ['/admin/produits', 'Produits', 'products'],
+  ['/admin/promotions', 'Promotions', 'promotions'],
+  ['/admin/codes', 'Codes promo', 'codes'],
+  ['/admin/commandes', 'Commandes', 'orders'],
+  ['/admin/clients', 'Clients', 'clients'],
   ['sep', 'Discord'],
-  ['/admin/mises-a-jour', 'Mises à jour'],
-  ['/admin/annonces', 'Annonces'],
+  ['/admin/mises-a-jour', 'Mises à jour', 'updates'],
+  ['/admin/annonces', 'Annonces', 'announcements'],
   ['sep', 'Site'],
-  ['/admin/devis', 'Devis'],
-  ['/admin/maintenance', 'Maintenance'],
-  ['/admin/reglages', 'Réglages'],
-  ['/admin/journal', 'Journal'],
+  ['/admin/docs', 'Documentation', 'docs'],
+  ['/admin/devis', 'Devis', 'quotes'],
+  ['/admin/essai', 'Serveur de test', 'test'],
+  ['/admin/maintenance', 'Maintenance', 'maintenance'],
+  ['/admin/equipe', 'Équipe', 'team'],
+  ['/admin/reglages', 'Réglages', 'settings'],
+  ['/admin/journal', 'Journal', 'journal'],
 ];
 
-export default function Nav() {
+export default function Nav({ perms = [] }) {
   const path = usePathname();
+  // Liens autorisés pour ce rôle, sans intertitre vide
+  const kept = LINKS.filter(([h, , perm]) => h === 'sep' || perms.includes(perm));
+  const allowed = kept.filter(([h], i) => h !== 'sep' || (kept[i + 1] && kept[i + 1][0] !== 'sep'));
   return (
     <nav className="adm-nav" aria-label="Admin">
-      {LINKS.map(([href, label], i) =>
+      {allowed.map(([href, label], i) =>
         href === 'sep' ? <span className="sep" key={i}>{label}</span> : (
           <a key={href} href={href} className={(href === '/admin' ? path === href : path.startsWith(href)) ? 'on' : ''}>{label}</a>
         ))}

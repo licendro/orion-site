@@ -98,6 +98,7 @@ export const LAYOUT = [
     { key: 'quotes', name: '🧾・devis', type: T, topic: 'Demandes de devis envoyées depuis le site.' },
     { key: 'logs', name: '📋・logs', type: T, topic: 'Arrivées, départs, actions du bot.' },
     { key: 'modlogs', name: '🛡️・modération', type: T, topic: 'Sanctions, avertissements et alertes AutoMod.' },
+    { key: 'alerts', name: '🚨・alertes', type: T, topic: 'Pannes et problèmes détectés automatiquement (site, bot, Tebex, paiements).' },
     { key: 'transcripts', name: '🗂️・transcripts', type: T, topic: 'Historique des tickets fermés.' },
     { key: 'staffVoice', name: '🔒・Staff', type: V },
   ] },

@@ -19,7 +19,7 @@ export default function Catalog({ categories }) {
   const [sort, setSort] = useState('pop');
 
   const list = useMemo(() => {
-    const l = products.filter((p) => !p.bundle.length && (!cat || p.cat === cat) && (p.name + ' ' + p.desc).toLowerCase().includes(q.toLowerCase()));
+    const l = products.filter((p) => !p.bundle.length && !p.subscription && (!cat || p.cat === cat) && (p.name + ' ' + p.desc).toLowerCase().includes(q.toLowerCase()));
     const by = {
       pop: (a, b) => b.pop - a.pop,
       asc: (a, b) => a.price - b.price,
@@ -35,7 +35,7 @@ export default function Catalog({ categories }) {
     <>
       <div className="cbar">
         <div className="seg" role="group" aria-label="Catégories">
-          {[{ id: 0, name: 'Tous' }, ...categories.filter((c) => products.some((p) => p.cat === c.id && !p.bundle.length))].map((c) => (
+          {[{ id: 0, name: 'Tous' }, ...categories.filter((c) => products.some((p) => p.cat === c.id && !p.bundle.length && !p.subscription))].map((c) => (
             <button key={c.id} aria-pressed={cat === c.id} onClick={() => setCat(c.id)}>{c.name}</button>
           ))}
         </div>

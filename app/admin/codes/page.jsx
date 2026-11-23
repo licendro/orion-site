@@ -1,9 +1,11 @@
+import { guard } from '../guard';
 import { getFullCatalog } from '../../../lib/catalog';
 import { listCoupons, pluginEnabled } from '../../../lib/tebexPlugin';
 import { createCode, removeCode } from '../actions';
 import { Flash, Head } from '../ui';
 
 export default async function Codes({ searchParams }) {
+  guard('codes');
   const enabled = pluginEnabled();
   let coupons = [];
   let error = null;

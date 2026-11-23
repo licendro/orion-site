@@ -148,8 +148,74 @@ CREATE TABLE IF NOT EXISTS grants (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS admins (
+  discord_id TEXT PRIMARY KEY,
+  role TEXT NOT NULL CHECK (role IN ('admin','support')),
+  added_by TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS docs (
+  slug TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'Guides',
+  product_key TEXT,
+  summary TEXT,
+  body TEXT NOT NULL DEFAULT '',
+  sort INTEGER DEFAULT 100,
+  published INTEGER DEFAULT 1,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id INTEGER PRIMARY KEY,
+  tebex_ref TEXT UNIQUE NOT NULL,
+  discord_id TEXT,
+  customer TEXT,
+  product_key TEXT,
+  name TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS test_sessions (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  discord_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting','active','done','cancelled')),
+  starts_at INTEGER,
+  ends_at INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS tickets (
+  channel_id TEXT PRIMARY KEY,
+  discord_id TEXT NOT NULL,
+  type TEXT,
+  status TEXT NOT NULL DEFAULT 'ai',
+  ai_turns INTEGER DEFAULT 0,
+  last_activity INTEGER,
+  reminded INTEGER DEFAULT 0,
+  claimed_by TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_warnings_user ON warnings(discord_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status, run_after);
 CREATE INDEX IF NOT EXISTS idx_orders_discord ON orders(discord_id);
 CREATE INDEX IF NOT EXISTS idx_items_order ON order_items(order_id);
 `;
+
+// Colonnes ajoutées après coup : appliquées une seule fois sur les bases existantes.
+export const MIGRATIONS = [
+  'ALTER TABLE products ADD COLUMN gallery TEXT',
+  'ALTER TABLE products ADD COLUMN docs TEXT',
+  "ALTER TABLE products ADD COLUMN kind TEXT DEFAULT 'single'",
+];
+
+export function migrate(d) {
+  for (const sql of MIGRATIONS) {
+    try { d.exec(sql); } catch { /* déjà appliquée */ }
+  }
+}

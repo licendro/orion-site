@@ -1,5 +1,6 @@
 // Offres de services et grilles tarifaires (page /services).
-// Pour chaque offre : les lignes (features) et les paliers. Dans un palier, une ligne vaut :
+// Pour chaque offre : les lignes (features) et les paliers.
+// « package » : nom exact du package ABONNEMENT sur Tebex. S'il existe, le bouton devient « S'abonner ». Dans un palier, une ligne vaut :
 //   true  → cochée      false → non incluse      'texte' → valeur affichée (ex. '24 h')
 
 export const OFFERS = [
@@ -48,10 +49,10 @@ export const OFFERS = [
       ['meeting', 'Point mensuel avec votre staff'],
     ],
     tiers: [
-      { name: 'Starter', price: '20 €', note: '/ mois', features: { bugs: true, reply: '72 h', edits: false, new: false, discount: '−10 %', optim: false, audit: false, access: false, bot: false, meeting: false } },
-      { name: 'Serveur', price: '50 €', note: '/ mois', features: { bugs: true, reply: '48 h', edits: true, new: false, discount: '−20 %', optim: true, audit: false, access: true, bot: false, meeting: false } },
-      { name: 'Pro', price: '100 €', note: '/ mois', highlight: true, features: { bugs: true, reply: '24 h', edits: true, new: '1 par mois', discount: '−30 %', optim: true, audit: true, access: true, bot: 'Essentiel', meeting: false } },
-      { name: 'Premium', price: '200 €', note: '/ mois', features: { bugs: true, reply: 'Prioritaire', edits: true, new: '3 par mois', discount: '−40 %', optim: true, audit: true, access: true, bot: 'Complet', meeting: true } },
+      { name: 'Starter', package: 'Partenariat Starter', price: '20 €', note: '/ mois', features: { bugs: true, reply: '72 h', edits: false, new: false, discount: '−10 %', optim: false, audit: false, access: false, bot: false, meeting: false } },
+      { name: 'Serveur', package: 'Partenariat Serveur', price: '50 €', note: '/ mois', features: { bugs: true, reply: '48 h', edits: true, new: false, discount: '−20 %', optim: true, audit: false, access: true, bot: false, meeting: false } },
+      { name: 'Pro', package: 'Partenariat Pro', price: '100 €', note: '/ mois', highlight: true, features: { bugs: true, reply: '24 h', edits: true, new: '1 par mois', discount: '−30 %', optim: true, audit: true, access: true, bot: 'Essentiel', meeting: false } },
+      { name: 'Premium', package: 'Partenariat Premium', price: '200 €', note: '/ mois', features: { bugs: true, reply: 'Prioritaire', edits: true, new: '3 par mois', discount: '−40 %', optim: true, audit: true, access: true, bot: 'Complet', meeting: true } },
     ],
   },
   {

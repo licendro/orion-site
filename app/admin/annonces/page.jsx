@@ -1,3 +1,4 @@
+import { guard } from '../guard';
 import { db } from '../../../lib/db';
 import { sendAnnouncement } from '../actions';
 import { Flash, Head, when } from '../ui';
@@ -6,6 +7,7 @@ const CHANNELS = [['announcements', '📢 annonces'], ['teasers', '👀 teasers'
 const PINGS = [['', 'Personne'], ['notifNew', '@🔔 Nouveautés'], ['notifPatch', '@🔔 Patch notes'], ['notifTeaser', '@🔔 Teasers'], ['notifPromo', '@🔔 Promos'], ['client', '@💎 Client Orion'], ['everyone', '@everyone']];
 
 export default function Announcements({ searchParams }) {
+  guard('announcements');
   const sent = db().prepare("SELECT * FROM jobs WHERE type = 'announce.custom' ORDER BY created_at DESC LIMIT 20").all();
   return (
     <>

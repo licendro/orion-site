@@ -1,5 +1,6 @@
 import { getCatalog } from '../../../../lib/catalog';
-import { addPackage, applyCoupon, getBasket, removePackage, tebexEnabled } from '../../../../lib/tebex';
+import { addPackage, applyCoupon, applyCreatorCode, getBasket, removePackage, tebexEnabled } from '../../../../lib/tebex';
+import { notify } from '../../../../lib/alerts';
 import { clientIp, json, rateLimited } from '../../../../lib/http';
 
 export const dynamic = 'force-dynamic';
@@ -41,10 +42,15 @@ export async function POST(req) {
         else console.error('[checkout/finish] coupon promo', code, e.message);
       }
     }
+    const creator = typeof body.creator === 'string' ? body.creator.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 40) : '';
+    if (creator) {
+      try { await applyCreatorCode(ident, creator); } catch (e) { warnings.push(`Code créateur ${creator} refusé : ${e.message}`); }
+    }
     basket = await getBasket(ident);
     return json({ checkoutUrl: basket.links?.checkout || null, total: basket.total_price, warnings });
   } catch (e) {
     console.error('[checkout/finish]', e.status, e.message);
+    notify('checkout-finish', 'Erreur pendant un paiement', `Étape « ouverture du paiement » : Tebex a répondu ${e.status || '?'} : ${e.message}`);
     if (e.status === 404) return json({ error: 'Session FiveM expirée, reconnecte-toi.', relogin: true }, 409);
     return json({ error: `Tebex : ${e.message}` }, 502);
   }

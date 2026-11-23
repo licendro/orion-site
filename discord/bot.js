@@ -12,6 +12,8 @@ import {
 import { COLOR, NOTIF_ROLES, ROLES, TICKETS } from './structure.js';
 import { addJob, db, startJobs } from './jobs.js';
 import { MOD_COMMANDS, createModeration } from './moderation.js';
+import { createTickets } from './tickets.js';
+import { aiEnabled } from './ai.js';
 
 const CONFIG = new URL('./config.json', import.meta.url);
 const loadCfg = () => JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
@@ -22,7 +24,11 @@ if (!fs.existsSync(CONFIG)) {
 let cfg = loadCfg();
 fs.watchFile(CONFIG, { interval: 5000 }, () => { try { cfg = loadCfg(); } catch { /* fichier en cours d'écriture */ } });
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+// Message Content (à activer dans le portail Discord) seulement si l'assistant IA est configuré.
+const client = new Client({ intents: [
+  GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages,
+  ...(aiEnabled() ? [GatewayIntentBits.MessageContent] : []),
+] });
 const staffIds = () => ROLES.filter((r) => r.staff || r.key === 'founder').map((r) => cfg.roles[r.key]).filter(Boolean);
 const isStaff = (member) => member.permissions.has(P.Administrator) || staffIds().some((id) => member.roles.cache.has(id));
 const ephemeral = (content) => ({ content, flags: MessageFlags.Ephemeral });
@@ -36,6 +42,7 @@ async function logTo(guild, key, embed) {
 
 let jobs = null;
 const mod = createModeration({ db, getCfg: () => cfg });
+const tickets = createTickets({ client, db, getCfg: () => cfg, staffIds, isStaff });
 
 const COMMANDS = [
   new SlashCommandBuilder().setName('mes-scripts').setDescription('Voir les scripts Orion que tu possèdes'),
@@ -53,6 +60,9 @@ client.once(Events.ClientReady, async (c) => {
     const guild = await c.guilds.fetch(process.env.GUILD_ID);
     await guild.commands.set([...COMMANDS, ...MOD_COMMANDS].map((x) => x.toJSON()));
     console.log(`✓ ${COMMANDS.length + MOD_COMMANDS.length} commandes enregistrées`);
+    await tickets.adopt(guild);
+    tickets.start();
+    console.log(aiEnabled() ? '✓ Assistant IA des tickets actif' : '· Assistant IA désactivé (ANTHROPIC_API_KEY absente)');
   } catch (e) { console.error('Commandes :', e.message); }
 });
 
@@ -120,90 +130,9 @@ client.on(Events.InteractionCreate, async (i) => {
       return i.reply(ephemeral(`🔔 Tu recevras les notifications **${n.label}**.`));
     }
 
-    // Ouverture d'un ticket
-    if (i.isStringSelectMenu() && i.customId === 'orion:ticket') {
-      const t = TICKETS.find((x) => x.value === i.values[0]);
-      if (!t) return i.reply(ephemeral('Type de ticket inconnu.'));
-      if (!i.member.roles.cache.has(cfg.roles.member) && !isStaff(i.member)) {
-        return i.reply(ephemeral(`Accepte d’abord le règlement dans <#${cfg.channels.rules}>.`));
-      }
-      if (t.clientOnly && !i.member.roles.cache.has(cfg.roles.client) && !isStaff(i.member)) {
-        return i.reply(ephemeral('Ce type de ticket est réservé aux clients. Tu as acheté un script mais n’as pas le rôle ? Ouvre un ticket « Autre » avec ton numéro de commande Tebex.'));
-      }
-      const marker = `uid:${i.user.id};type:${t.value}`;
-      const existing = i.guild.channels.cache.find((c) => c.topic?.includes(marker));
-      if (existing) return i.reply(ephemeral(`Tu as déjà un ticket ouvert pour ça : <#${existing.id}>`));
-
-      await i.deferReply({ flags: MessageFlags.Ephemeral });
-      const name = `${t.value}-${i.user.username}`.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 90) || `ticket-${t.value}`;
-      const channel = await i.guild.channels.create({
-        name,
-        type: ChannelType.GuildText,
-        parent: cfg.channels[t.category],
-        topic: `${t.emoji} ${t.label} · ${i.user.tag} · ${marker}`,
-        permissionOverwrites: [
-          { id: i.guild.roles.everyone.id, deny: [P.ViewChannel] },
-          { id: i.user.id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.AttachFiles, P.EmbedLinks] },
-          ...staffIds().map((id) => ({ id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.AttachFiles, P.EmbedLinks, P.ManageMessages] })),
-          { id: client.user.id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.ManageChannels, P.EmbedLinks] },
-        ],
-      });
-      const help = {
-        support: 'Indique le **script**, sa **version**, ton **framework** et ce qui ne va pas (captures, erreurs F8 / console).',
-        bug: 'Indique le **script** et sa **version**, ce qui se passe, comment le reproduire, et les erreurs F8 / console.',
-        presale: 'Pose ta question : script concerné, ton framework, ton inventaire…',
-        partner: 'Présente ton serveur : nom, nombre de joueurs, framework, et ce dont tu as besoin. Formules de 20 à 200 € par mois.',
-        custom: 'Décris le script ou le bot voulu, ton framework et ton budget. Devis gratuit sous 24 h.',
-        other: 'Explique ta demande, on te répond vite.',
-      }[t.value];
-      await channel.send({
-        content: `<@${i.user.id}>`,
-        embeds: [new EmbedBuilder().setColor(COLOR).setTitle(`${t.emoji} ${t.label}`).setDescription(`Merci <@${i.user.id}>, l’équipe arrive.\n\n${help}`).setTimestamp()],
-        components: [new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId('orion:ticket:claim').setStyle(ButtonStyle.Secondary).setLabel('Prendre en charge').setEmoji('🙋'),
-          new ButtonBuilder().setCustomId('orion:ticket:close').setStyle(ButtonStyle.Danger).setLabel('Fermer').setEmoji('🔒'),
-        )],
-      });
-      logTo(i.guild, 'logs', new EmbedBuilder().setColor(COLOR).setDescription(`🎫 Ticket **${t.label}** ouvert par <@${i.user.id}> : <#${channel.id}>`).setTimestamp());
-      return i.editReply(`✅ Ton ticket est ouvert : <#${channel.id}>`);
-    }
-
-    // Prise en charge
-    if (i.isButton() && i.customId === 'orion:ticket:claim') {
-      if (!isStaff(i.member)) return i.reply(ephemeral('Réservé à l’équipe.'));
-      return i.reply({ embeds: [new EmbedBuilder().setColor(COLOR).setDescription(`🙋 Ticket pris en charge par <@${i.user.id}>.`)] });
-    }
-
-    // Fermeture : transcript dans #transcripts puis suppression
-    if (i.isButton() && i.customId === 'orion:ticket:close') {
-      const owner = /uid:(\d+)/.exec(i.channel.topic || '')?.[1];
-      if (!isStaff(i.member) && i.user.id !== owner) return i.reply(ephemeral('Seuls l’équipe ou l’auteur peuvent fermer ce ticket.'));
-      await i.reply({ embeds: [new EmbedBuilder().setColor(0x9aa0ad).setDescription(`🔒 Ticket fermé par <@${i.user.id}>. Suppression dans 5 secondes…`)] });
-
-      const all = [];
-      let before;
-      for (let n = 0; n < 10; n++) {
-        const batch = await i.channel.messages.fetch({ limit: 100, before });
-        if (!batch.size) break;
-        all.push(...batch.values());
-        before = batch.last().id;
-      }
-      const lines = all.reverse().map((m) => {
-        const when = new Date(m.createdTimestamp).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
-        const text = [m.content, ...m.embeds.map((e) => [e.title, e.description].filter(Boolean).join(' — ')), ...m.attachments.map((a) => a.url)].filter(Boolean).join(' | ');
-        return `[${when}] ${m.author.tag} : ${text}`;
-      });
-      const file = new AttachmentBuilder(Buffer.from(`Ticket ${i.channel.name}\n${i.channel.topic || ''}\n\n${lines.join('\n')}\n`, 'utf8'), { name: `${i.channel.name}.txt` });
-      try {
-        const tr = await i.guild.channels.fetch(cfg.channels.transcripts);
-        await tr.send({
-          embeds: [new EmbedBuilder().setColor(COLOR).setTitle(`🗂️ ${i.channel.name}`)
-            .setDescription(`Auteur : ${owner ? `<@${owner}>` : 'inconnu'}\nFermé par : <@${i.user.id}>\nMessages : ${lines.length}`).setTimestamp()],
-          files: [file],
-        });
-      } catch { /* salon des transcripts absent */ }
-      setTimeout(() => i.channel.delete('Ticket fermé').catch(() => {}), 5000);
-    }
+    // Tickets (ouverture, IA, transfert, prise en charge, fermeture)
+    if (i.isStringSelectMenu() && i.customId === 'orion:ticket') return tickets.open(i);
+    if (i.isButton() && (i.customId.startsWith('orion:ticket:') || i.customId.startsWith('orion:ai:'))) return tickets.button(i);
   } catch (e) {
     console.error('[interaction]', e);
     const msg = 'Une erreur est survenue. Préviens un membre de l’équipe.';
@@ -211,5 +140,7 @@ client.on(Events.InteractionCreate, async (i) => {
     else if (!i.isAutocomplete?.()) i.reply?.(ephemeral(msg)).catch(() => {});
   }
 });
+
+client.on(Events.MessageCreate, (m) => { tickets.message(m).catch((e) => console.error('[ticket msg]', e.message)); });
 
 client.login(process.env.DISCORD_TOKEN);

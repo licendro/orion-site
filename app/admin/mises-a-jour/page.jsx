@@ -1,9 +1,11 @@
+import { guard } from '../guard';
 import { db } from '../../../lib/db';
 import { getFullCatalog } from '../../../lib/catalog';
 import { publishUpdate } from '../actions';
 import { Flash, Head, when } from '../ui';
 
 export default async function Updates({ searchParams }) {
+  guard('updates');
   const { products } = await getFullCatalog();
   const logs = db().prepare('SELECT * FROM changelogs ORDER BY created_at DESC LIMIT 30').all();
   const name = (k) => products.find((p) => p.key === k)?.name || k;

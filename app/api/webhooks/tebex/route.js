@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { addJob, audit, db } from '../../../../lib/db';
 import { clientIp } from '../../../../lib/http';
+import { notify } from '../../../../lib/alerts';
 import { keyOf } from '../../../../lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -69,7 +70,9 @@ export async function POST(req) {
             const key = byTebex.get(String(p.id)) || keyOf(p.name);
             for (let q = 0; q < (p.quantity || 1); q++) ins.run(info.lastInsertRowid, key, p.name, Number(p.paid_price?.amount ?? p.base_price?.amount ?? 0));
           }
-          addJob('purchase.completed', { order_id: Number(info.lastInsertRowid) });
+          const kinds = (s.products || []).map((p) => d.prepare('SELECT kind FROM products WHERE tebex_id = ?').get(p.id)?.kind);
+          const onlySubs = kinds.length > 0 && kinds.every((k) => k === 'subscription');
+          if (!onlySubs) addJob('purchase.completed', { order_id: Number(info.lastInsertRowid) });
         })();
         audit(null, 'commande.payée', tx, { discord: discordId, total: s.price_paid?.amount });
         return ok();
@@ -97,11 +100,38 @@ export async function POST(req) {
         return ok();
       }
 
+      // Abonnements (formules partenaires)
+      case 'recurring-payment.started':
+      case 'recurring-payment.renewed':
+      case 'recurring-payment.cancellation.requested':
+      case 'recurring-payment.cancellation.aborted':
+      case 'recurring-payment.ended': {
+        const ref = String(s.reference || s.id || '');
+        if (!ref) return ok();
+        const pay = s.initial_payment || s.last_payment || {};
+        const custom = typeof pay.custom === 'string' ? safeJson(pay.custom) : pay.custom || {};
+        const discordId = custom?.discord_id ? String(custom.discord_id) : null;
+        const prod = (pay.products || [])[0] || {};
+        const key = d.prepare('SELECT key FROM products WHERE tebex_id = ?').get(prod.id)?.key || keyOf(prod.name || '');
+        const status = { 'recurring-payment.ended': 'ended', 'recurring-payment.cancellation.requested': 'cancelling' }[body.type] || 'active';
+        const before = d.prepare('SELECT * FROM subscriptions WHERE tebex_ref = ?').get(ref);
+        d.prepare(`INSERT INTO subscriptions (tebex_ref, discord_id, customer, product_key, name, status) VALUES (?, ?, ?, ?, ?, ?)
+          ON CONFLICT(tebex_ref) DO UPDATE SET status = excluded.status, discord_id = COALESCE(excluded.discord_id, subscriptions.discord_id), updated_at = CURRENT_TIMESTAMP`)
+          .run(ref, discordId, pay.customer?.username?.username || null, key, prod.name || null, status);
+        const who = discordId || before?.discord_id;
+        if (status === 'active' && (!before || before.status === 'ended')) addJob('partner.started', { discord_id: who, name: prod.name || before?.name, ref });
+        if (status === 'ended') addJob('partner.ended', { discord_id: who, name: prod.name || before?.name, ref });
+        if (status === 'cancelling') addJob('announce.staff', { title: '🤝 Résiliation demandée', text: `${who ? `<@${who}>` : 'Un partenaire'} a demandé la résiliation de **${prod.name || before?.name || 'son abonnement'}** (actif jusqu’à la fin de la période).` });
+        audit(null, `abonnement.${status}`, ref, { discord: who, name: prod.name });
+        return ok();
+      }
+
       default:
         return ok();
     }
   } catch (e) {
     console.error('[tebex webhook]', e);
+    notify('webhook-error', 'Webhook Tebex en erreur', `${body.type} (${tx}) : ${e.message}. Tebex va réessayer ; vérifie Admin → Commandes.`, 'critical');
     return NextResponse.json({ error: 'interne' }, { status: 500 });
   }
 }

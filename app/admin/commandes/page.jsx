@@ -1,8 +1,10 @@
+import { guard } from '../guard';
 import { db } from '../../../lib/db';
 import { eur } from '../../../lib/format';
 import { Head, Status, when } from '../ui';
 
 export default function Orders({ searchParams }) {
+  guard('orders');
   const q = String(searchParams?.q || '').trim();
   const orders = q
     ? db().prepare('SELECT * FROM orders WHERE tebex_tx LIKE ? OR customer LIKE ? OR discord_id LIKE ? OR email LIKE ? ORDER BY created_at DESC LIMIT 200').all(...Array(4).fill(`%${q}%`))

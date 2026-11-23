@@ -1,3 +1,4 @@
+import { guard } from '../guard';
 import { db } from '../../../lib/db';
 import { setQuoteStatus } from '../actions';
 import { Flash, Head, when } from '../ui';
@@ -6,6 +7,7 @@ const TYPES = { 'sur-mesure': 'Sur mesure', partenariat: 'Partenariat', bot: 'Bo
 const STATES = ['nouveau', 'en cours', 'accepté', 'refusé', 'terminé'];
 
 export default function Quotes({ searchParams }) {
+  guard('quotes');
   const quotes = db().prepare('SELECT * FROM quotes ORDER BY created_at DESC LIMIT 200').all();
   return (
     <>

@@ -12,7 +12,7 @@ export default {
   eslint: { ignoreDuringBuilds: true },
   experimental: {
     serverComponentsExternalPackages: ['better-sqlite3'],
-    serverActions: { bodySizeLimit: '6mb' },
+    serverActions: { bodySizeLimit: '30mb' },
   },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];

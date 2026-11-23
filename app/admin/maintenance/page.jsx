@@ -1,8 +1,10 @@
+import { guard } from '../guard';
 import { getSetting } from '../../../lib/db';
 import { saveMaintenance } from '../actions';
 import { Flash, Head } from '../ui';
 
 export default function Maintenance({ searchParams }) {
+  guard('maintenance');
   const on = getSetting('maintenance', false);
   return (
     <>

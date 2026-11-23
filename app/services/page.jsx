@@ -1,5 +1,8 @@
 import { OFFERS, A_LA_CARTE } from '../../content/services';
 import QuoteForm, { QuoteButton } from '../../components/QuoteForm';
+import { SubscribeButton } from '../../components/Shop';
+import { getCatalog } from '../../lib/catalog';
+import { keyOf } from '../../lib/format';
 
 export const metadata = {
   title: 'Services',
@@ -12,7 +15,7 @@ function Cell({ v }) {
   return <span className="val">{v}</span>;
 }
 
-function Offer({ o }) {
+function Offer({ o, subs }) {
   return (
     <section className="band offer" id={o.id} style={{ paddingTop: 0 }}>
       <div className="wrap">
@@ -31,7 +34,9 @@ function Offer({ o }) {
                   <li key={k} className={t.features[k] ? '' : 'off'}><span>{label}</span><Cell v={t.features[k]} /></li>
                 ))}
               </ul>
-              <QuoteButton type={o.quote} className={'btn' + (t.highlight ? ' pri' : '')} tier={`${o.label} · ${t.name}`}>Choisir {t.name}</QuoteButton>
+              {t.package && subs.has(keyOf(t.package))
+                ? <SubscribeButton k={keyOf(t.package)} className={'btn' + (t.highlight ? ' pri' : '')}>S’abonner · {t.price}{t.note}</SubscribeButton>
+                : <QuoteButton type={o.quote} className={'btn' + (t.highlight ? ' pri' : '')} tier={`${o.label} · ${t.name}`}>Choisir {t.name}</QuoteButton>}
             </article>
           ))}
         </div>
@@ -40,7 +45,9 @@ function Offer({ o }) {
   );
 }
 
-export default function Services() {
+export default async function Services() {
+  const { products } = await getCatalog();
+  const subs = new Set(products.filter((p) => p.subscription).map((p) => p.key));
   return (
     <main id="top">
       <section className="hero" style={{ paddingBottom: 'clamp(56px,8vw,96px)' }}>
@@ -54,7 +61,7 @@ export default function Services() {
         </div>
       </section>
 
-      {OFFERS.map((o) => <Offer o={o} key={o.id} />)}
+      {OFFERS.map((o) => <Offer o={o} key={o.id} subs={subs} />)}
 
       <section className="band" style={{ paddingTop: 0 }}>
         <div className="wrap">

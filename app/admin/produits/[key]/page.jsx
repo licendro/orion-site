@@ -1,3 +1,4 @@
+import { guard } from '../../guard';
 import { notFound } from 'next/navigation';
 import { getFullCatalog } from '../../../../lib/catalog';
 import { db } from '../../../../lib/db';
@@ -6,6 +7,7 @@ import { publishProduct, saveProduct, unpublishProduct } from '../../actions';
 import { Flash, Head, when } from '../../ui';
 
 export default async function EditProduct({ params, searchParams }) {
+  guard('products');
   const { products } = await getFullCatalog();
   const p = products.find((x) => x.key === params.key);
   if (!p) notFound();
@@ -55,7 +57,11 @@ export default async function EditProduct({ params, searchParams }) {
           <label>Ordre d’affichage <span className="hint">1 = en premier, 0 = automatique</span><input className="field" name="sort" type="number" min="0" max="999" defaultValue={row.sort || 0} /></label>
           <label>Image (URL)<input className="field" name="image_url" maxLength={500} defaultValue={row.image || ''} placeholder={p.img} /></label>
           <label>Ou envoyer une image <span className="hint">PNG / JPG / WEBP, 5 Mo max, 16:9 conseillé</span><input className="field" name="image_file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style={{ paddingTop: 10 }} /></label>
-          <label>Vidéo (YouTube…)<input className="field" name="video" maxLength={300} defaultValue={row.video || ''} /></label>
+          <label>Vidéo YouTube <span className="hint">Lien de la vidéo, affichée sur la fiche</span><input className="field" name="video" maxLength={300} defaultValue={row.video || ''} placeholder="https://youtu.be/…" /></label>
+          <label className="full">Galerie <span className="hint">Une URL d’image par ligne (12 max), dans l’ordre d’affichage</span>
+            <textarea name="gallery" maxLength={4000} defaultValue={row.gallery || ''} placeholder={'/img/banque.jpg\nhttps://…/capture2.png'} style={{ minHeight: 90 }} />
+          </label>
+          <label className="full">Ajouter des images à la galerie <span className="hint">Plusieurs fichiers possibles, 5 Mo max chacun</span><input className="field" name="gallery_files" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif" style={{ paddingTop: 10 }} /></label>
           <label>Scripts du pack <span className="hint">Noms séparés par des virgules, seulement pour un pack</span><input className="field" name="bundle" maxLength={500} defaultValue={row.bundle || p.bundle.join(',')} /></label>
           <div className="full chks">
             <label className="chk"><input type="checkbox" name="featured" defaultChecked={p.featured} /> Grande carte dans le catalogue</label>

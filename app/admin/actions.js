@@ -2,16 +2,18 @@
 
 import { redirect } from 'next/navigation';
 import { revalidateTag } from 'next/cache';
-import { getUser, isAdmin } from '../../lib/auth';
+import { can, getRole, getUser } from '../../lib/auth';
 import { addJob, audit, db, getSetting, setSetting } from '../../lib/db';
 import { absUrl, announcePayload, getFullCatalog } from '../../lib/catalog';
 import { createCoupon, deleteCoupon, pluginEnabled } from '../../lib/tebexPlugin';
 import { saveUpload } from '../../lib/uploads';
 import { siteUrl } from '../../lib/http';
 
-function admin() {
+function admin(perm) {
   const u = getUser();
-  if (!isAdmin(u)) redirect('/');
+  const role = getRole(u);
+  if (!role) redirect('/');
+  if (perm && !can(role, perm)) redirect(`/admin?err=${encodeURIComponent('Ton rôle ne permet pas cette action.')}#flash`);
   return u.username;
 }
 const str = (fd, k, n = 2000) => String(fd.get(k) ?? '').trim().slice(0, n);
@@ -29,7 +31,7 @@ const go = (path, msg, err) => redirect(`${path}?${err ? 'err' : 'ok'}=${encodeU
 
 // ---------- Produits ----------
 export async function saveProduct(fd) {
-  const who = admin();
+  const who = admin('products');
   const key = str(fd, 'key', 80);
   let image = str(fd, 'image_url', 500) || null;
   try {
@@ -37,17 +39,25 @@ export async function saveProduct(fd) {
     if (up) image = up;
   } catch (e) { go(`/admin/produits/${key}`, e.message, true); }
   if (bool(fd, 'image_reset')) image = null;
-  db().prepare(`UPDATE products SET short = ?, description = ?, version = ?, features = ?, video = ?, bundle = ?, image = ?,
+  // Galerie : URLs saisies (une par ligne) + images envoyées
+  const gallery = str(fd, 'gallery', 4000).split('\n').map((l) => l.trim()).filter(Boolean);
+  try {
+    for (const f of fd.getAll('gallery_files')) {
+      const up = await saveUpload(f);
+      if (up) gallery.push(up);
+    }
+  } catch (e) { go(`/admin/produits/${key}`, e.message, true); }
+  db().prepare(`UPDATE products SET short = ?, description = ?, version = ?, features = ?, video = ?, bundle = ?, image = ?, gallery = ?,
     featured = ?, hidden = ?, sort = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?`).run(
     str(fd, 'short', 200) || null, str(fd, 'description', 5000) || null, str(fd, 'version', 20) || null, str(fd, 'features', 3000) || null,
-    str(fd, 'video', 300) || null, str(fd, 'bundle', 500) || null, image, bool(fd, 'featured') ? 1 : 0, bool(fd, 'hidden') ? 1 : 0,
+    str(fd, 'video', 300) || null, str(fd, 'bundle', 500) || null, image, gallery.slice(0, 12).join('\n') || null, bool(fd, 'featured') ? 1 : 0, bool(fd, 'hidden') ? 1 : 0,
     Number(str(fd, 'sort', 5)) || 0, key);
   audit(who, 'produit.modifié', key, null);
   go(`/admin/produits/${key}`, 'Fiche enregistrée.');
 }
 
 export async function publishProduct(fd) {
-  const who = admin();
+  const who = admin('products');
   const key = str(fd, 'key', 80);
   const announce = bool(fd, 'announce');
   db().prepare('UPDATE products SET published = 1, hidden = 0 WHERE key = ?').run(key);
@@ -64,7 +74,7 @@ export async function publishProduct(fd) {
 }
 
 export async function unpublishProduct(fd) {
-  const who = admin();
+  const who = admin('products');
   const key = str(fd, 'key', 80);
   db().prepare('UPDATE products SET published = 0 WHERE key = ?').run(key);
   audit(who, 'produit.dépublié', key, null);
@@ -72,7 +82,7 @@ export async function unpublishProduct(fd) {
 }
 
 export async function syncNow() {
-  const who = admin();
+  const who = admin('products');
   revalidateTag('tebex');
   audit(who, 'tebex.synchro', null, null);
   go('/admin/produits', 'Catalogue Tebex relu.');
@@ -80,7 +90,7 @@ export async function syncNow() {
 
 // ---------- Promotions (bandeau + coupon Tebex) ----------
 export async function createPromotion(fd) {
-  const who = admin();
+  const who = admin('promotions');
   const name = str(fd, 'name', 60);
   const type = fd.get('type') === 'fixed' ? 'fixed' : 'percent';
   const value = Number(String(fd.get('value')).replace(',', '.'));
@@ -120,7 +130,7 @@ export async function createPromotion(fd) {
 }
 
 export async function togglePromotion(fd) {
-  const who = admin();
+  const who = admin('promotions');
   const id = Number(fd.get('id'));
   db().prepare('UPDATE promotions SET active = 1 - active WHERE id = ?').run(id);
   audit(who, 'promo.basculée', String(id), null);
@@ -128,7 +138,7 @@ export async function togglePromotion(fd) {
 }
 
 export async function deletePromotion(fd) {
-  const who = admin();
+  const who = admin('promotions');
   const id = Number(fd.get('id'));
   const p = db().prepare('SELECT * FROM promotions WHERE id = ?').get(id);
   if (p?.tebex_coupon_id && pluginEnabled()) await deleteCoupon(p.tebex_coupon_id).catch(() => {});
@@ -139,7 +149,7 @@ export async function deletePromotion(fd) {
 
 // ---------- Codes promo Tebex ----------
 export async function createCode(fd) {
-  const who = admin();
+  const who = admin('codes');
   if (!pluginEnabled()) go('/admin/codes', 'Ajoute TEBEX_SECRET_KEY dans le .env.', true);
   const code = str(fd, 'code', 40).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
   const type = fd.get('type') === 'fixed' ? 'fixed' : 'percent';
@@ -157,7 +167,7 @@ export async function createCode(fd) {
 }
 
 export async function removeCode(fd) {
-  const who = admin();
+  const who = admin('codes');
   const id = str(fd, 'id', 40);
   try { await deleteCoupon(id); } catch (e) { go('/admin/codes', e.message, true); }
   audit(who, 'code.supprimé', id, null);
@@ -166,10 +176,11 @@ export async function removeCode(fd) {
 
 // ---------- Maintenance ----------
 export async function saveMaintenance(fd) {
-  const who = admin();
+  const who = admin('maintenance');
   const on = bool(fd, 'on');
   const was = getSetting('maintenance', false);
   setSetting('maintenance', on);
+  if (on && !was) setSetting('maintenance_since', Date.now());
   setSetting('maintenance_message', str(fd, 'message', 300));
   setSetting('maintenance_until', str(fd, 'until', 60));
   if (bool(fd, 'announce') && on !== was) addJob('maintenance.changed', { on, message: str(fd, 'message', 300), until: str(fd, 'until', 60) });
@@ -179,7 +190,7 @@ export async function saveMaintenance(fd) {
 
 // ---------- Mises à jour de scripts ----------
 export async function publishUpdate(fd) {
-  const who = admin();
+  const who = admin('updates');
   const key = str(fd, 'key', 80);
   const version = str(fd, 'version', 20);
   const notes = str(fd, 'notes', 3500);
@@ -198,7 +209,7 @@ export async function publishUpdate(fd) {
 
 // ---------- Annonces Discord ----------
 export async function sendAnnouncement(fd) {
-  const who = admin();
+  const who = admin('announcements');
   const channel = str(fd, 'channel', 30);
   const title = str(fd, 'title', 200);
   const text = str(fd, 'text', 3800);
@@ -215,7 +226,7 @@ export async function sendAnnouncement(fd) {
 
 // ---------- Clients, devis, jobs, réglages ----------
 export async function resyncCustomer(fd) {
-  const who = admin();
+  const who = admin('clients');
   const id = str(fd, 'discord_id', 30);
   addJob('customer.resync', { discord_id: id });
   audit(who, 'client.resync', id, null);
@@ -223,23 +234,97 @@ export async function resyncCustomer(fd) {
 }
 
 export async function setQuoteStatus(fd) {
-  const who = admin();
+  const who = admin('quotes');
   db().prepare('UPDATE quotes SET status = ? WHERE id = ?').run(str(fd, 'status', 20), Number(fd.get('id')));
   audit(who, 'devis.statut', String(fd.get('id')), str(fd, 'status', 20));
   go('/admin/devis', 'Statut mis à jour.');
 }
 
 export async function retryJob(fd) {
-  const who = admin();
+  const who = admin('journal');
   db().prepare("UPDATE jobs SET status = 'pending', attempts = 0, error = NULL, run_after = 0 WHERE id = ?").run(Number(fd.get('id')));
   audit(who, 'job.relancé', String(fd.get('id')), null);
   go('/admin/journal', 'Tâche relancée.');
 }
 
 export async function saveSettings(fd) {
-  const who = admin();
+  const who = admin('settings');
   setSetting('auto_announce', bool(fd, 'auto_announce'));
   setSetting('top_banner', str(fd, 'top_banner', 200));
   audit(who, 'réglages.modifiés', null, null);
   go('/admin/reglages', 'Réglages enregistrés.');
+}
+
+// ---------- Équipe (fondateur uniquement) ----------
+export async function addTeamMember(fd) {
+  const who = admin('team');
+  const id = str(fd, 'discord_id', 30).replace(/\D/g, '');
+  const role = fd.get('role') === 'admin' ? 'admin' : 'support';
+  if (id.length < 15) go('/admin/equipe', 'Identifiant Discord invalide (17 à 20 chiffres).', true);
+  db().prepare('INSERT INTO admins (discord_id, role, added_by) VALUES (?, ?, ?) ON CONFLICT(discord_id) DO UPDATE SET role = excluded.role').run(id, role, who);
+  audit(who, 'équipe.ajout', id, role);
+  go('/admin/equipe', 'Membre ajouté. Il se connecte à /admin avec son Discord.');
+}
+
+export async function removeTeamMember(fd) {
+  const who = admin('team');
+  const id = str(fd, 'discord_id', 30);
+  db().prepare('DELETE FROM admins WHERE discord_id = ?').run(id);
+  audit(who, 'équipe.retrait', id, null);
+  go('/admin/equipe', 'Accès retiré.');
+}
+
+// ---------- Documentation ----------
+export async function saveDoc(fd) {
+  const who = admin('docs');
+  const old = str(fd, 'old_slug', 80);
+  const title = str(fd, 'title', 120);
+  const slug = (str(fd, 'slug', 80) || title).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (!title || !slug) go(old ? `/admin/docs/${old}` : '/admin/docs/nouveau', 'Titre obligatoire.', true);
+  const vals = [title, str(fd, 'category', 40) || 'Guides', str(fd, 'product_key', 80) || null, str(fd, 'summary', 240) || null,
+    String(fd.get('body') ?? '').slice(0, 60000), Number(fd.get('sort')) || 100, bool(fd, 'published') ? 1 : 0];
+  if (old && old !== slug && db().prepare('SELECT 1 FROM docs WHERE slug = ?').get(slug)) go(`/admin/docs/${old}`, 'Cette adresse est déjà utilisée par une autre page.', true);
+  if (old) db().prepare('UPDATE docs SET slug = ?, title = ?, category = ?, product_key = ?, summary = ?, body = ?, sort = ?, published = ?, updated_at = CURRENT_TIMESTAMP WHERE slug = ?').run(slug, ...vals, old);
+  else {
+    if (db().prepare('SELECT 1 FROM docs WHERE slug = ?').get(slug)) go('/admin/docs/nouveau', 'Cette adresse est déjà utilisée.', true);
+    db().prepare('INSERT INTO docs (slug, title, category, product_key, summary, body, sort, published) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(slug, ...vals);
+  }
+  audit(who, old ? 'doc.modifiée' : 'doc.créée', slug, null);
+  go(`/admin/docs/${slug}`, 'Page enregistrée.');
+}
+
+export async function deleteDoc(fd) {
+  const who = admin('docs');
+  const slug = str(fd, 'slug', 80);
+  db().prepare('DELETE FROM docs WHERE slug = ?').run(slug);
+  audit(who, 'doc.supprimée', slug, null);
+  go('/admin/docs', 'Page supprimée.');
+}
+
+// ---------- Serveur de test ----------
+export async function saveTestSettings(fd) {
+  const who = admin('settings');
+  setSetting('test_enabled', bool(fd, 'enabled'));
+  setSetting('test_connect', str(fd, 'connect', 120));
+  setSetting('test_query', str(fd, 'query', 120));
+  setSetting('test_slots', Math.max(1, Math.min(64, Number(fd.get('slots')) || 4)));
+  setSetting('test_minutes', Math.max(5, Math.min(240, Number(fd.get('minutes')) || 30)));
+  setSetting('test_clients_only', bool(fd, 'clients_only'));
+  audit(who, 'essai.réglages', null, null);
+  go('/admin/essai', 'Réglages du serveur de test enregistrés.');
+}
+
+export async function endTestSession(fd) {
+  const who = admin('test');
+  db().prepare("UPDATE test_sessions SET status = 'cancelled' WHERE id = ?").run(Number(fd.get('id')));
+  audit(who, 'essai.créneau_arrêté', String(fd.get('id')), null);
+  go('/admin/essai', 'Créneau arrêté.');
+}
+
+export async function rotateTestKey() {
+  const who = admin('settings');
+  const { rotateApiKey } = await import('../../lib/testserver');
+  rotateApiKey();
+  audit(who, 'essai.nouvelle_clé', null, null);
+  go('/admin/essai', 'Nouvelle clé générée : mets-la à jour dans la config de orn_testgate.');
 }

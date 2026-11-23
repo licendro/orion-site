@@ -9,6 +9,7 @@ export const useShop = () => useContext(ShopCtx);
 const STORE = 'orion-cart-v1';
 const PENDING = 'orion-checkout-v1';
 const FIVEM = 'orion-fivem-v1';
+const REF = 'orion-ref-v1';
 const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k) || 'null') ?? d; } catch { return d; } };
 const write = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch { /* stockage indisponible */ } };
 
@@ -53,12 +54,17 @@ export function ShopProvider({ products, mode, user, owned = [], loginRequired =
 
   // orn_lib : gratuit et obligatoire. Ajouté avec le premier script (sauf s'il est déjà possédé), jamais retiré seul.
   const lib = useMemo(() => products.find((p) => p.required) || null, [products]);
-  const needsLib = useCallback((c) => !!lib && !owned.includes(lib.key) && c.some((x) => x !== lib.key), [lib, owned]);
+  const needsLib = useCallback((c) => !!lib && !owned.includes(lib.key) && c.some((x) => x !== lib.key && !byKey.get(x)?.subscription), [lib, owned, byKey]);
 
   const toggle = useCallback((k) => {
     const p = byKey.get(k);
     if (!p) return;
     if (packHas(k)) return toast(`${p.name} fait partie du ${pack.name}`, true);
+    if (!cart.includes(k)) {
+      const subs = cart.some((x) => byKey.get(x)?.subscription);
+      if (p.subscription && cart.length) return toast('Un abonnement se paie seul : vide d’abord ton panier.', true);
+      if (!p.subscription && subs) return toast('Ton panier contient un abonnement : paie-le d’abord, ou retire-le.', true);
+    }
     if (cart.includes(k)) {
       if (p.required && needsLib(cart)) return toast(`${p.name} est requis par les scripts de ton panier.`, true);
       setCart((c) => c.filter((x) => x !== k));
@@ -83,6 +89,10 @@ export function ShopProvider({ products, mode, user, owned = [], loginRequired =
 
   const lines = cart.map((k) => byKey.get(k)).filter(Boolean);
   const total = lines.reduce((s, p) => s + p.price, 0);
+
+  // Code créateur : saisi dans le panier ou apporté par un lien ?ref=CODE (gardé 30 jours)
+  const [creator, setCreatorState] = useState('');
+  const setCreator = useCallback((c) => { setCreatorState(c); write(REF, c ? { code: c, t: Date.now() } : null); }, []);
 
   // Compte FiveM (Cfx.re) relié avant le paiement : panier Tebex authentifié, gardé sur l'appareil.
   const [fivem, setFivem] = useState(null);
@@ -149,7 +159,7 @@ export function ShopProvider({ products, mode, user, owned = [], loginRequired =
     setBusy(true);
     try {
       const r = await fetch('/api/checkout/finish', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ident: fivem.ident, items: cart, coupon }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ident: fivem.ident, items: cart, coupon, creator }),
       });
       const j = await r.json();
       if (r.status === 409 && j.relogin) { saveFivem(null); throw new Error(j.error); }
@@ -161,13 +171,22 @@ export function ShopProvider({ products, mode, user, owned = [], loginRequired =
     } finally {
       setBusy(false);
     }
-  }, [mode, cart, coupon, fivem, loginRequired, launch, toast, connectFivem, saveFivem]);
+  }, [mode, cart, coupon, creator, fivem, loginRequired, launch, toast, connectFivem, saveFivem]);
 
   // Au chargement : retour de la connexion Cfx.re, ou vérification du compte FiveM déjà relié.
   useEffect(() => {
     const url = new URL(window.location.href);
     const clean = () => window.history.replaceState(null, '', url.pathname + url.search + url.hash);
     if (url.searchParams.get('panier')) { url.searchParams.delete('panier'); clean(); setOpen(true); }
+    const ref = (url.searchParams.get('ref') || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 40);
+    if (ref) {
+      url.searchParams.delete('ref'); clean();
+      setCreator(ref);
+      toast(`Code créateur ${ref} appliqué à tes achats`);
+    } else {
+      const saved = read(REF, null);
+      if (saved && Date.now() - saved.t < 30 * 864e5) setCreatorState(saved.code);
+    }
     const back = url.searchParams.get('fivem');
     const saved = read(FIVEM, null);
     if (back) {
@@ -189,7 +208,7 @@ export function ShopProvider({ products, mode, user, owned = [], loginRequired =
         else if (st.username && st.username !== saved.name) saveFivem({ ...saved, name: st.username });
       }).catch(() => {});
     }
-  }, [status, saveFivem, toast]);
+  }, [status, saveFivem, toast, setCreator]);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
@@ -197,7 +216,7 @@ export function ShopProvider({ products, mode, user, owned = [], loginRequired =
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const value = { products, byKey, pack, mode, user, loginRequired, cart, inCart, toggle, remove, coupon, setCoupon, open, setOpen, busy, checkout, connectFivem, fivem, saveFivem, toast, lines, total };
+  const value = { products, byKey, pack, mode, user, loginRequired, cart, inCart, toggle, remove, coupon, setCoupon, creator, setCreator, open, setOpen, busy, checkout, connectFivem, fivem, saveFivem, toast, lines, total };
 
   return (
     <ShopCtx.Provider value={value}>
@@ -240,7 +259,9 @@ export function AddButton({ k, variant = 'card', className = '' }) {
 }
 
 function CartDrawer() {
-  const { open, setOpen, lines, remove, total, coupon, setCoupon, checkout, connectFivem, fivem, saveFivem, busy, mode, user, loginRequired } = useShop();
+  const { open, setOpen, lines, remove, total, coupon, setCoupon, creator, setCreator, checkout, connectFivem, fivem, saveFivem, busy, mode, user, loginRequired } = useShop();
+  const [cc, setCc] = useState(creator);
+  useEffect(() => setCc(creator), [creator]);
   const [code, setCode] = useState(coupon);
   useEffect(() => setCode(coupon), [coupon]);
   const saveCode = (e) => { e.preventDefault(); setCoupon(code.trim().toUpperCase()); };
@@ -278,6 +299,11 @@ function CartDrawer() {
               <button className="btn sm" type="submit">Appliquer</button>
             </form>
             {coupon ? <div className="sum"><span>Code {coupon}</span><span style={{ color: 'var(--acc)' }}>appliqué au paiement</span></div> : null}
+            <form className="coupon" onSubmit={(e) => { e.preventDefault(); setCreator(cc.trim().toUpperCase()); }}>
+              <label htmlFor="ccIn" className="sr">Code créateur</label>
+              <input className="field" id="ccIn" placeholder="Code créateur (facultatif)" value={cc} maxLength={40} onChange={(e) => setCc(e.target.value)} />
+              <button className="btn sm" type="submit">{creator && cc.trim().toUpperCase() === creator ? '✓' : 'OK'}</button>
+            </form>
             <div className="sum big"><span>Total</span><b>{eur(total)}</b></div>
             {mode === 'tebex' ? (
               <>
@@ -309,4 +335,12 @@ function CartDrawer() {
       </aside>
     </>
   );
+}
+
+// Bouton « S'abonner » (formules partenaires reliées à un package abonnement Tebex)
+export function SubscribeButton({ k, className = 'btn', children }) {
+  const { inCart, toggle, setOpen, byKey } = useShop();
+  if (!byKey.get(k)) return null;
+  const click = () => { if (!inCart(k)) toggle(k); setOpen(true); };
+  return <button className={className} onClick={click}>{inCart(k) ? 'Dans le panier ✓' : children}</button>;
 }

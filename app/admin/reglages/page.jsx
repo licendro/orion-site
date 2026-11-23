@@ -1,3 +1,4 @@
+import { guard } from '../guard';
 import { getSetting } from '../../../lib/db';
 import { tebexEnabled } from '../../../lib/tebex';
 import { pluginEnabled } from '../../../lib/tebexPlugin';
@@ -8,6 +9,7 @@ import { Flash, Head } from '../ui';
 const ok = (b) => (b ? <span className="pill2 ok">OK</span> : <span className="pill2 warn">À remplir</span>);
 
 export default function Settings({ searchParams }) {
+  guard('settings');
   return (
     <>
       <Head title="Réglages" />

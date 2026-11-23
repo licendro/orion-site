@@ -1,3 +1,4 @@
+import { guard } from '../guard';
 import { db } from '../../../lib/db';
 import { getFullCatalog } from '../../../lib/catalog';
 import { pluginEnabled } from '../../../lib/tebexPlugin';
@@ -5,6 +6,7 @@ import { createPromotion, deletePromotion, togglePromotion } from '../actions';
 import { Flash, Head, when } from '../ui';
 
 export default async function Promotions({ searchParams }) {
+  guard('promotions');
   const promos = db().prepare('SELECT * FROM promotions ORDER BY created_at DESC').all();
   const { products } = await getFullCatalog();
   const now = Date.now();

@@ -1,4 +1,5 @@
 import { createBasket, getAuthLinks, tebexEnabled } from '../../../../lib/tebex';
+import { notify } from '../../../../lib/alerts';
 import { clientIp, json, rateLimited, siteUrl } from '../../../../lib/http';
 import { discordConfigured, getUser } from '../../../../lib/auth';
 import { getSetting } from '../../../../lib/db';
@@ -29,6 +30,7 @@ export async function POST(req) {
     return json({ ident: basket.ident, authUrl: link?.url || null });
   } catch (e) {
     console.error('[checkout/start]', e.status, e.message);
+    notify('checkout-start', 'Erreur pendant un paiement', `Étape « connexion FiveM » : Tebex a répondu ${e.status || '?'} : ${e.message}`);
     return json({ error: `Tebex : ${e.message}` }, 502);
   }
 }

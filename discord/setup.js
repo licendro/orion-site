@@ -188,6 +188,13 @@ async function run() {
   if (!hook) hook = await quotes.createWebhook({ name: 'Orion · Devis', avatar: `${(process.env.SITE_URL || 'https://jdev-hub.fr').replace(/\/+$/, '')}/logo.png`, reason: 'Formulaire de devis du site' }).catch(() => quotes.createWebhook({ name: 'Orion · Devis' }));
   cfg.quoteWebhook = hook.url;
 
+  // Webhook des alertes (utilisé par le site, même si le bot est éteint)
+  const alerts = await guild.channels.fetch(cfg.channels.alerts);
+  const ahooks = await alerts.fetchWebhooks();
+  let ahook = ahooks.find((h) => h.name === 'Orion · Alertes' && h.token);
+  if (!ahook) ahook = await alerts.createWebhook({ name: 'Orion · Alertes', reason: 'Alertes automatiques du site' });
+  cfg.alertWebhook = ahook.url;
+
   // 6. AutoMod Discord (filtrage natif, sans lire les messages)
   log('\nAutoMod');
   const alert = { type: AutoModerationActionType.SendAlertMessage, metadata: { channel: cfg.channels.modlogs || cfg.channels.logs } };

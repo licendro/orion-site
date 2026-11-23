@@ -1,3 +1,4 @@
+import { guard } from '../guard';
 import { db } from '../../../lib/db';
 import { retryJob } from '../actions';
 import { Head, Status, when } from '../ui';
@@ -9,6 +10,7 @@ const LABELS = {
 };
 
 export default function Journal() {
+  guard('journal');
   const jobs = db().prepare('SELECT * FROM jobs ORDER BY id DESC LIMIT 60').all();
   const logs = db().prepare('SELECT * FROM audit_logs ORDER BY id DESC LIMIT 100').all();
   return (

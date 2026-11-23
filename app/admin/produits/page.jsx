@@ -1,9 +1,11 @@
+import { guard } from '../guard';
 import { getFullCatalog } from '../../../lib/catalog';
 import { eur } from '../../../lib/format';
 import { syncNow } from '../actions';
 import { Flash, Head, when } from '../ui';
 
 export default async function Products({ searchParams }) {
+  guard('products');
   const { mode, products } = await getFullCatalog();
   const sorted = [...products].sort((a, b) => (a.published - b.published) || b.pop - a.pop);
   return (
