@@ -13,7 +13,6 @@ import { COLOR, NOTIF_ROLES, ROLES, TICKETS } from './structure.js';
 import { addJob, db, startJobs } from './jobs.js';
 import { MOD_COMMANDS, createModeration } from './moderation.js';
 import { createTickets } from './tickets.js';
-import { aiEnabled } from './ai.js';
 
 const CONFIG = new URL('./config.json', import.meta.url);
 const loadCfg = () => JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
@@ -24,10 +23,9 @@ if (!fs.existsSync(CONFIG)) {
 let cfg = loadCfg();
 fs.watchFile(CONFIG, { interval: 5000 }, () => { try { cfg = loadCfg(); } catch { /* fichier en cours d'écriture */ } });
 
-// Message Content (à activer dans le portail Discord) seulement si l'assistant IA est configuré.
+// Message Content : à activer dans le portail Discord (onglet Bot) pour l'assistant des tickets.
 const client = new Client({ intents: [
-  GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages,
-  ...(aiEnabled() ? [GatewayIntentBits.MessageContent] : []),
+  GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent,
 ] });
 const staffIds = () => ROLES.filter((r) => r.staff || r.key === 'founder').map((r) => cfg.roles[r.key]).filter(Boolean);
 const isStaff = (member) => member.permissions.has(P.Administrator) || staffIds().some((id) => member.roles.cache.has(id));
@@ -62,7 +60,6 @@ client.once(Events.ClientReady, async (c) => {
     console.log(`✓ ${COMMANDS.length + MOD_COMMANDS.length} commandes enregistrées`);
     await tickets.adopt(guild);
     tickets.start();
-    console.log(aiEnabled() ? '✓ Assistant IA des tickets actif' : '· Assistant IA désactivé (ANTHROPIC_API_KEY absente)');
   } catch (e) { console.error('Commandes :', e.message); }
 });
 

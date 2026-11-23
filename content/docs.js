@@ -190,7 +190,7 @@ Ouvrez un ticket **Support** sur Discord avec : le nom et la version du script, 
   },
   {
     slug: 'support', category: 'Discord et support', sort: 30, title: 'Obtenir de l’aide',
-    summary: 'Tickets, assistant IA, équipe et délais de réponse.',
+    summary: 'Tickets, assistant automatique, équipe et délais de réponse.',
     body: `## Ouvrir un ticket
 Sur notre Discord, salon **#ouvrir-un-ticket**, choisissez le type de demande. Un salon privé s’ouvre avec vous.
 
@@ -198,7 +198,7 @@ Sur notre Discord, salon **#ouvrir-un-ticket**, choisissez le type de demande. U
 - **Question avant achat**, **Partenariat**, **Sur mesure**, **Autre** : ouverts à tous.
 
 ## L’assistant Orion
-Un assistant IA répond tout de suite, avec la documentation et la liste de vos scripts. Si sa réponse vous suffit, cliquez **Résolu**. Sinon, **Parler à l’équipe** : le ticket passe à un membre du staff, qui reprend la conversation.
+Un assistant automatique vous répond tout de suite avec les passages de la documentation qui correspondent à votre message. Si ça suffit, cliquez **C’est résolu**. Sinon, **Parler à l’équipe** : le ticket passe à un membre du staff, qui reprend la conversation.
 
 ## Délais
 L’équipe répond en général dans la journée. Les tickets sans réponse de votre part pendant 48 h sont fermés automatiquement (après un rappel).
