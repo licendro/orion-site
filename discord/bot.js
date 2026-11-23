@@ -13,6 +13,7 @@ import { COLOR, NOTIF_ROLES, ROLES, TICKETS } from './structure.js';
 import { addJob, db, startJobs } from './jobs.js';
 import { MOD_COMMANDS, createModeration } from './moderation.js';
 import { createTickets } from './tickets.js';
+import { BUG_COMMANDS, createBugs } from './bugs.js';
 
 const CONFIG = new URL('./config.json', import.meta.url);
 const loadCfg = () => JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
@@ -41,6 +42,7 @@ async function logTo(guild, key, embed) {
 let jobs = null;
 const mod = createModeration({ db, getCfg: () => cfg });
 const tickets = createTickets({ client, db, getCfg: () => cfg, staffIds, isStaff });
+const bugs = createBugs({ client, db, getCfg: () => cfg, isStaff });
 
 const COMMANDS = [
   new SlashCommandBuilder().setName('mes-scripts').setDescription('Voir les scripts Orion que tu possèdes'),
@@ -53,11 +55,11 @@ const COMMANDS = [
 client.once(Events.ClientReady, async (c) => {
   console.log(`✓ Bot connecté : ${c.user.tag}`);
   c.user.setPresence({ activities: [{ name: 'jdev-hub.fr', type: 3 }], status: 'online' });
-  jobs = startJobs(client, () => cfg, tickets.jobs);
+  jobs = startJobs(client, () => cfg, { ...tickets.jobs, ...bugs.jobs });
   try {
     const guild = await c.guilds.fetch(process.env.GUILD_ID);
-    await guild.commands.set([...COMMANDS, ...MOD_COMMANDS].map((x) => x.toJSON()));
-    console.log(`✓ ${COMMANDS.length + MOD_COMMANDS.length} commandes enregistrées`);
+    await guild.commands.set([...COMMANDS, ...MOD_COMMANDS, ...BUG_COMMANDS].map((x) => x.toJSON()));
+    console.log(`✓ ${COMMANDS.length + MOD_COMMANDS.length + BUG_COMMANDS.length} commandes enregistrées`);
     await tickets.adopt(guild);
     tickets.start();
   } catch (e) { console.error('Commandes :', e.message); }
@@ -80,7 +82,9 @@ client.on(Events.InteractionCreate, async (i) => {
   try {
     if (!i.inGuild()) return;
 
-    if (i.isAutocomplete()) return mod.autocomplete(i);
+    if (i.isAutocomplete()) return bugs.names.has(i.commandName) ? bugs.autocomplete(i) : mod.autocomplete(i);
+    if ((i.isButton() || i.isStringSelectMenu()) && i.customId.startsWith('orion:bug:')) return bugs.component(i);
+    if (i.isChatInputCommand() && bugs.names.has(i.commandName)) return bugs.command(i);
     if (i.isButton() && i.customId.startsWith('orion:grant')) return mod.button(i);
 
     // Commandes slash

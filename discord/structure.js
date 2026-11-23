@@ -95,6 +95,7 @@ export const LAYOUT = [
   { key: 'catStaff', name: '🔒 STAFF', mode: 'staff', channels: [
     { key: 'staffChat', name: '💼・staff', type: T, topic: 'Discussion de l’équipe.' },
     { key: 'dev', name: '🛠️・dev', type: T, topic: 'Développement, idées, roadmap.' },
+    { key: 'bugTracker', name: '🐞・suivi-bugs', type: T, topic: 'Une fiche par bug confirmé. Change le statut avec le menu de chaque fiche ou /bug statut.' },
     { key: 'quotes', name: '🧾・devis', type: T, topic: 'Demandes de devis envoyées depuis le site.' },
     { key: 'logs', name: '📋・logs', type: T, topic: 'Arrivées, départs, actions du bot.' },
     { key: 'modlogs', name: '🛡️・modération', type: T, topic: 'Sanctions, avertissements et alertes AutoMod.' },

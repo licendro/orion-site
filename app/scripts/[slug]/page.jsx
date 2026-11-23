@@ -4,6 +4,8 @@ import { AddButton } from '../../../components/Shop';
 import { Price, PromoBand } from '../../../components/Price';
 import Gallery from '../../../components/Gallery';
 import { db } from '../../../lib/db';
+import BugList from '../../../components/BugList';
+import { knownBugs } from '../../../lib/bugs';
 
 export const revalidate = 300;
 
@@ -19,6 +21,7 @@ export default async function ProductPage({ params }) {
   const { products } = await getCatalog();
   const bundleItems = p.bundle.map((k) => products.find((x) => x.key === k)).filter(Boolean);
   const lib = products.find((x) => x.required);
+  const known = knownBugs(p.key);
   const logs = db().prepare('SELECT version, notes, created_at FROM changelogs WHERE product_key = ? ORDER BY id DESC LIMIT 8').all(p.key);
   const doc = db().prepare('SELECT slug FROM docs WHERE product_key = ? AND published = 1 ORDER BY sort LIMIT 1').get(p.key);
   const images = [p.img, ...p.gallery.filter((g) => g !== p.img)];
@@ -53,6 +56,14 @@ export default async function ProductPage({ params }) {
             <a className="btn" href={`/docs/${doc?.slug || `script-${p.slug}`}`}>📚 Documentation du script</a>
           </div>
         </div>
+
+        {known.length ? (
+          <section className="known">
+            <h2>Problèmes connus</h2>
+            <BugList bugs={known} showProduct={false} />
+            <p className="muted" style={{ marginTop: 10, fontSize: 14 }}>On s’en occupe. Suivez l’avancement sur la page <a href="/bugs">Problèmes connus</a>.</p>
+          </section>
+        ) : null}
 
         {logs.length ? (
           <section className="changelog">

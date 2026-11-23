@@ -191,7 +191,12 @@ Ouvrez un ticket **Support** sur Discord avec : le nom et la version du script, 
   {
     slug: 'support', category: 'Discord et support', sort: 30, title: 'Obtenir de l’aide',
     summary: 'Tickets, assistant automatique, équipe et délais de réponse.',
-    body: `## Ouvrir un ticket
+    body: `## Signaler un bug
+Postez dans **#bug-report** sur Discord (un post par bug : script, version, framework, ce qui se passe, erreurs F8 / console), ou ouvrez un ticket **Bug**. Une fois le bug vérifié, l’équipe crée sa **fiche** : vous recevez un message privé à chaque étape (confirmé, en cours, corrigé, publié dans la version X).
+
+Même problème qu’un autre joueur ? Cliquez **🙋 J’ai aussi ce bug** sous sa fiche pour être prévenu vous aussi. La liste des bugs en cours est sur la page [Problèmes connus](/bugs), et chaque fiche script affiche les siens.
+
+## Ouvrir un ticket
 Sur notre Discord, salon **#ouvrir-un-ticket**, choisissez le type de demande. Un salon privé s’ouvre avec vous.
 
 - **Support** et **Bug** : réservés aux clients, traités en priorité.

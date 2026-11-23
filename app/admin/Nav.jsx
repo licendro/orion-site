@@ -15,6 +15,7 @@ const LINKS = [
   ['/admin/annonces', 'Annonces', 'announcements'],
   ['sep', 'Site'],
   ['/admin/docs', 'Documentation', 'docs'],
+  ['/admin/bugs', 'Bugs', 'bugs'],
   ['/admin/devis', 'Devis', 'quotes'],
   ['/admin/essai', 'Serveur de test', 'test'],
   ['/admin/maintenance', 'Maintenance', 'maintenance'],

@@ -201,6 +201,33 @@ CREATE TABLE IF NOT EXISTS tickets (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS bugs (
+  id INTEGER PRIMARY KEY,
+  product_key TEXT,
+  title TEXT NOT NULL,
+  description TEXT,
+  severity TEXT DEFAULT 'genant',
+  status TEXT NOT NULL DEFAULT 'nouveau',
+  fixed_version TEXT,
+  note TEXT,
+  reporter_id TEXT,
+  thread_id TEXT,
+  ticket_channel_id TEXT,
+  card_message_id TEXT,
+  thread_message_id TEXT,
+  duplicate_of INTEGER,
+  created_by TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS bug_followers (
+  bug_id INTEGER NOT NULL REFERENCES bugs(id) ON DELETE CASCADE,
+  discord_id TEXT NOT NULL,
+  PRIMARY KEY (bug_id, discord_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bugs_status ON bugs(status, product_key);
 CREATE INDEX IF NOT EXISTS idx_warnings_user ON warnings(discord_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status, run_after);
 CREATE INDEX IF NOT EXISTS idx_orders_discord ON orders(discord_id);

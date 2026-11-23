@@ -204,7 +204,10 @@ export function startJobs(client, getCfg, extra = {}) {
     async 'script.updated'(p) {
       const notes = p.notes.split('\n').map((l) => l.trim()).filter(Boolean).map((l) =>
         l.startsWith('+') ? `🟢 ${l.slice(1).trim()}` : l.startsWith('-') ? `🔴 ${l.slice(1).trim()}` : l.startsWith('~') ? `🟠 ${l.slice(1).trim()}` : `• ${l}`).join('\n');
-      const embed = () => new EmbedBuilder().setColor(COLOR).setTitle(`📝 ${p.name} · v${p.version}`).setURL(p.url).setDescription(notes)
+      // Bugs corrigés dans cette version (passés en « publié » par le site)
+      const fixed = p.fixed || [];
+      const fixedText = fixed.length ? `\n\n**🐞 Bugs corrigés**\n${fixed.map((b) => `✅ #${b.id} ${b.title}`).join('\n')}` : '';
+      const embed = () => new EmbedBuilder().setColor(COLOR).setTitle(`📝 ${p.name} · v${p.version}`).setURL(p.url).setDescription((notes + fixedText).slice(0, 4000))
         .setThumbnail(p.image || logo()).setFooter({ text: 'Mise à jour disponible dans ton Keymaster', iconURL: logo() }).setTimestamp();
       const role = cfg().roles.notifPatch;
       await (await channel('patchnotes')).send({ content: role ? `<@&${role}>` : undefined, allowedMentions: { roles: role ? [role] : [] }, embeds: [embed()] });

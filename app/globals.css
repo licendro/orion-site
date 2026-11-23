@@ -474,3 +474,17 @@ html.orn-cursor input:not([type=checkbox]):not([type=radio]),html.orn-cursor tex
 .dnav a span{font-size:12.5px;color:var(--ink3)}
 @media(max-width:1100px){.docs{grid-template-columns:200px minmax(0,1fr)}.dtoc{display:none}}
 @media(max-width:860px){.docs{grid-template-columns:minmax(0,1fr)}.dside{position:static;max-height:none;border-bottom:1px solid var(--line);padding-bottom:14px}.dgrid{grid-template-columns:minmax(0,1fr)}}
+
+/* Suivi des bugs */
+.buglist{list-style:none;margin:0;padding:0;border:1px solid var(--line);display:flex;flex-direction:column}
+.buglist li{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px 16px;border-top:1px solid var(--line);background:rgba(7,8,12,.55)}
+.buglist li:first-child{border-top:0}
+.buglist .id{color:var(--ink3);font-size:13px}
+.buglist .t{color:var(--ink);font-size:15px}
+.buglist .t small{color:var(--ink3);font-size:13px}
+.buglist .st{font-size:13px;color:var(--ink2);white-space:nowrap}
+.buglist .s-corrige .st,.buglist .s-publie .st{color:#86efac}
+.buglist .s-en_cours .st{color:#9cc4ff}
+@media (max-width:640px){.buglist li{grid-template-columns:auto 1fr}.buglist .st{grid-column:2;white-space:normal}}
+.known{margin-top:clamp(40px,6vw,64px);max-width:860px}
+.known h2{font-size:clamp(24px,3vw,30px);margin-bottom:16px}

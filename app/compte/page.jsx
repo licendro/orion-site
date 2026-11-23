@@ -3,6 +3,8 @@ import { avatarUrl, getUser } from '../../lib/auth';
 import { db } from '../../lib/db';
 import { getFullCatalog } from '../../lib/catalog';
 import { eur } from '../../lib/format';
+import BugList from '../../components/BugList';
+import { bugsOf } from '../../lib/bugs';
 
 export const metadata = { title: 'Mon compte', robots: { index: false } };
 export const dynamic = 'force-dynamic';
@@ -12,6 +14,7 @@ const STATUS = { paid: 'Payée', refunded: 'Remboursée', chargeback: 'Litige' }
 export default async function Account() {
   const user = getUser();
   if (!user) redirect('/api/auth/discord?next=/compte');
+  const myBugs = bugsOf(user.discord_id);
   const orders = db().prepare('SELECT * FROM orders WHERE user_id = ? OR discord_id = ? ORDER BY created_at DESC').all(user.id, user.discord_id);
   const items = db().prepare(`SELECT oi.*, o.status, o.created_at FROM order_items oi JOIN orders o ON o.id = oi.order_id
     WHERE (o.user_id = ? OR o.discord_id = ?) ORDER BY o.created_at DESC`).all(user.id, user.discord_id);
@@ -71,6 +74,13 @@ export default async function Account() {
             </div>
           ) : <p className="muted">Aucune commande.</p>}
         </section>
+
+        {myBugs.length ? (
+          <section>
+            <h3 style={{ marginBottom: 18 }}>Mes bugs signalés</h3>
+            <BugList bugs={myBugs} />
+          </section>
+        ) : null}
 
         <div className="warn">
           Tes scripts sont livrés dans ton Keymaster Cfx.re. Le rôle Client et ton salon privé t’attendent sur notre Discord.{' '}

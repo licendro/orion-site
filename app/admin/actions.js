@@ -200,8 +200,14 @@ export async function publishUpdate(fd) {
   if (!p) go('/admin/mises-a-jour', 'Script introuvable.', true);
   db().prepare('INSERT INTO changelogs (product_key, version, notes, author) VALUES (?, ?, ?, ?)').run(key, version, notes, who);
   db().prepare('UPDATE products SET version = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?').run(version, key);
+  // Les bugs « corrigé, prochaine mise à jour » de ce script sont publiés dans cette version, et les clients prévenus
+  const fixed = db().prepare("SELECT id, title FROM bugs WHERE product_key = ? AND status = 'corrige'").all(key);
+  for (const b of fixed) {
+    db().prepare("UPDATE bugs SET status = 'publie', fixed_version = ?, note = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(version, b.id);
+    addJob('bug.changed', { id: b.id, old: 'corrige' });
+  }
   if (bool(fd, 'announce')) {
-    addJob('script.updated', { key, name: p.name, version, notes, url: `${siteUrl()}/scripts/${p.slug}`, image: absUrl(p.img), notifyClients: bool(fd, 'clients') });
+    addJob('script.updated', { key, name: p.name, version, notes, fixed, url: `${siteUrl()}/scripts/${p.slug}`, image: absUrl(p.img), notifyClients: bool(fd, 'clients') });
   }
   audit(who, 'maj.publiée', key, { version });
   go('/admin/mises-a-jour', `${p.name} ${version} publiée.`);
@@ -231,6 +237,49 @@ export async function resyncCustomer(fd) {
   addJob('customer.resync', { discord_id: id });
   audit(who, 'client.resync', id, null);
   go('/admin/clients', 'Rôle et salon resynchronisés par le bot.');
+}
+
+// ---------- Bugs ----------
+const BUG_STATES = ['nouveau', 'confirme', 'en_cours', 'corrige', 'publie', 'refuse', 'doublon'];
+export async function saveBug(fd) {
+  const who = admin('bugs');
+  const id = Number(fd.get('id')) || null;
+  const status = BUG_STATES.includes(str(fd, 'status')) ? str(fd, 'status') : 'confirme';
+  const severity = ['critique', 'genant', 'mineur'].includes(str(fd, 'severity')) ? str(fd, 'severity') : 'genant';
+  const back = id ? `/admin/bugs/${id}` : '/admin/bugs';
+  if (!id) {
+    const title = str(fd, 'title', 120);
+    if (!title) go('/admin/bugs', 'Donne un titre au bug.', true);
+    const reporter = str(fd, 'reporter', 30).replace(/\D/g, '') || null;
+    const { lastInsertRowid } = db().prepare(`INSERT INTO bugs (product_key, title, description, severity, status, reporter_id, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`).run(str(fd, 'product', 80) || null, title, str(fd, 'description', 1500) || null, severity, status, reporter, who);
+    addJob('bug.changed', { id: Number(lastInsertRowid), old: 'nouveau' });
+    audit(who, 'bug.créé', `#${lastInsertRowid}`, title);
+    go(`/admin/bugs/${lastInsertRowid}`, `Bug #${lastInsertRowid} créé.`);
+  }
+  const b = db().prepare('SELECT * FROM bugs WHERE id = ?').get(id);
+  if (!b) go('/admin/bugs', 'Bug introuvable.', true);
+  const dup = status === 'doublon' ? Number(fd.get('duplicate_of')) || null : null;
+  if (status === 'doublon') {
+    if (!dup || dup === id || !db().prepare('SELECT 1 FROM bugs WHERE id = ?').get(dup)) go(back, 'Indique le numéro du bug d’origine.', true);
+    for (const w of [b.reporter_id, ...db().prepare('SELECT discord_id FROM bug_followers WHERE bug_id = ?').all(id).map((r) => r.discord_id)].filter(Boolean)) {
+      db().prepare('INSERT OR IGNORE INTO bug_followers (bug_id, discord_id) VALUES (?, ?)').run(dup, w);
+    }
+  }
+  db().prepare(`UPDATE bugs SET title = ?, description = ?, product_key = ?, severity = ?, status = ?, note = ?, fixed_version = ?, duplicate_of = ?,
+    updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(str(fd, 'title', 120) || b.title, str(fd, 'description', 1500) || null, str(fd, 'product', 80) || b.product_key,
+    severity, status, str(fd, 'note', 500) || (b.status === status ? b.note : null), str(fd, 'version', 20) || null, dup, id);
+  addJob('bug.changed', { id, old: b.status });
+  audit(who, 'bug.modifié', `#${id}`, b.status === status ? 'détails' : `${b.status} → ${status}`);
+  go(back, b.status === status ? 'Bug mis à jour.' : 'Statut changé, les personnes concernées sont prévenues.');
+}
+
+export async function deleteBug(fd) {
+  const who = admin('bugs');
+  const id = Number(fd.get('id'));
+  db().prepare('DELETE FROM bugs WHERE id = ?').run(id);
+  audit(who, 'bug.supprimé', `#${id}`, null);
+  go('/admin/bugs', `Bug #${id} supprimé (la fiche Discord reste, supprime-la à la main si besoin).`);
 }
 
 export async function setQuoteStatus(fd) {
