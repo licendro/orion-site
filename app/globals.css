@@ -488,3 +488,29 @@ html.orn-cursor input:not([type=checkbox]):not([type=radio]),html.orn-cursor tex
 @media (max-width:640px){.buglist li{grid-template-columns:auto 1fr}.buglist .st{grid-column:2;white-space:normal}}
 .known{margin-top:clamp(40px,6vw,64px);max-width:860px}
 .known h2{font-size:clamp(24px,3vw,30px);margin-bottom:16px}
+
+/* Idées */
+.ideas-top{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.ideas-top .field{flex:1;min-width:200px}
+.idea-form{margin-bottom:16px}
+.similar{font-size:14px;color:var(--ink2);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chipb{border:1px solid var(--line2);background:rgba(237,239,243,.03);color:var(--ink);padding:5px 10px;font-size:13px;cursor:pointer}
+.chipb:hover{border-color:var(--acc)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:18px 0 0;overflow-x:auto}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--ink3);padding:10px 14px;font:500 14px Inter;cursor:pointer;white-space:nowrap}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--acc)}
+.idealist{list-style:none;margin:0;padding:0}
+.idealist li{display:grid;grid-template-columns:56px 1fr;gap:16px;padding:18px 0;border-bottom:1px solid var(--line)}
+.idealist .vote{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--line);background:rgba(7,8,12,.6);padding:6px 0;align-self:start}
+.idealist .vote button{background:none;border:0;color:var(--ink3);cursor:pointer;font-size:14px;padding:4px 10px;line-height:1}
+.idealist .vote button:hover:not(:disabled){color:var(--ink)}
+.idealist .vote button.on{color:var(--acc)}
+.idealist .vote button.on.down{color:#9cc4ff}
+.idealist .vote button:disabled{opacity:.35;cursor:default}
+.idealist .vote b{font-family:Inter,sans-serif;font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}
+.idealist h4{margin:0 0 6px;font-size:17px}
+.idealist p{margin:0 0 8px;color:var(--ink2);font-size:14.5px;white-space:pre-line;overflow-wrap:anywhere}
+.idealist .note{color:var(--ink);background:rgba(255,122,47,.06);border-left:2px solid var(--acc);padding:8px 12px}
+.idealist .meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--ink3)}
+.idealist .st{color:var(--ink2)}
+.idealist .s-prevue,.idealist .s-dev{color:#9cc4ff}.idealist .s-sortie{color:#86efac}

@@ -14,6 +14,7 @@ import { addJob, db, startJobs } from './jobs.js';
 import { MOD_COMMANDS, createModeration } from './moderation.js';
 import { createTickets } from './tickets.js';
 import { BUG_COMMANDS, createBugs } from './bugs.js';
+import { IDEA_COMMANDS, createIdeas } from './ideas.js';
 
 const CONFIG = new URL('./config.json', import.meta.url);
 const loadCfg = () => JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
@@ -43,6 +44,7 @@ let jobs = null;
 const mod = createModeration({ db, getCfg: () => cfg });
 const tickets = createTickets({ client, db, getCfg: () => cfg, staffIds, isStaff });
 const bugs = createBugs({ client, db, getCfg: () => cfg, isStaff });
+const ideas = createIdeas({ client, db, getCfg: () => cfg, isStaff });
 
 const COMMANDS = [
   new SlashCommandBuilder().setName('mes-scripts').setDescription('Voir les scripts Orion que tu possèdes'),
@@ -55,11 +57,11 @@ const COMMANDS = [
 client.once(Events.ClientReady, async (c) => {
   console.log(`✓ Bot connecté : ${c.user.tag}`);
   c.user.setPresence({ activities: [{ name: 'jdev-hub.fr', type: 3 }], status: 'online' });
-  jobs = startJobs(client, () => cfg, { ...tickets.jobs, ...bugs.jobs });
+  jobs = startJobs(client, () => cfg, { ...tickets.jobs, ...bugs.jobs, ...ideas.jobs });
   try {
     const guild = await c.guilds.fetch(process.env.GUILD_ID);
-    await guild.commands.set([...COMMANDS, ...MOD_COMMANDS, ...BUG_COMMANDS].map((x) => x.toJSON()));
-    console.log(`✓ ${COMMANDS.length + MOD_COMMANDS.length + BUG_COMMANDS.length} commandes enregistrées`);
+    await guild.commands.set([...COMMANDS, ...MOD_COMMANDS, ...BUG_COMMANDS, ...IDEA_COMMANDS].map((x) => x.toJSON()));
+    console.log(`✓ ${COMMANDS.length + MOD_COMMANDS.length + BUG_COMMANDS.length + IDEA_COMMANDS.length} commandes enregistrées`);
     await tickets.adopt(guild);
     tickets.start();
   } catch (e) { console.error('Commandes :', e.message); }
@@ -85,6 +87,8 @@ client.on(Events.InteractionCreate, async (i) => {
     if (i.isAutocomplete()) return bugs.names.has(i.commandName) ? bugs.autocomplete(i) : mod.autocomplete(i);
     if ((i.isButton() || i.isStringSelectMenu()) && i.customId.startsWith('orion:bug:')) return bugs.component(i);
     if (i.isChatInputCommand() && bugs.names.has(i.commandName)) return bugs.command(i);
+    if (i.isChatInputCommand() && ideas.names.has(i.commandName)) return ideas.command(i);
+    if ((i.isButton() || i.isStringSelectMenu() || i.isModalSubmit()) && i.customId.startsWith('orion:idea:')) return ideas.component(i);
     if (i.isButton() && i.customId.startsWith('orion:grant')) return mod.button(i);
 
     // Commandes slash
@@ -142,6 +146,7 @@ client.on(Events.InteractionCreate, async (i) => {
   }
 });
 
+client.on(Events.ThreadCreate, (th, newly) => { ideas.threadCreated(th, newly).catch((e) => console.error('[idée]', e.message)); });
 client.on(Events.MessageCreate, (m) => { tickets.message(m).catch((e) => console.error('[ticket msg]', e.message)); });
 
 client.login(process.env.DISCORD_TOKEN);

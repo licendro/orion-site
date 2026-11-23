@@ -227,6 +227,32 @@ CREATE TABLE IF NOT EXISTS bug_followers (
   PRIMARY KEY (bug_id, discord_id)
 );
 
+CREATE TABLE IF NOT EXISTS ideas (
+  id INTEGER PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  kind TEXT DEFAULT 'script',
+  product_key TEXT,
+  status TEXT NOT NULL DEFAULT 'nouvelle',
+  note TEXT,
+  author_id TEXT,
+  author_name TEXT,
+  thread_id TEXT UNIQUE,
+  card_message_id TEXT,
+  released_key TEXT,
+  source TEXT DEFAULT 'discord',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS idea_votes (
+  idea_id INTEGER NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
+  discord_id TEXT NOT NULL,
+  value INTEGER NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (idea_id, discord_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_bugs_status ON bugs(status, product_key);
 CREATE INDEX IF NOT EXISTS idx_warnings_user ON warnings(discord_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status, run_after);

@@ -5,6 +5,8 @@ import { getFullCatalog } from '../../lib/catalog';
 import { eur } from '../../lib/format';
 import BugList from '../../components/BugList';
 import { bugsOf } from '../../lib/bugs';
+import { ideasOf } from '../../lib/ideas';
+import { IDEA_STATUS } from '../../db/ideas.mjs';
 
 export const metadata = { title: 'Mon compte', robots: { index: false } };
 export const dynamic = 'force-dynamic';
@@ -15,6 +17,7 @@ export default async function Account() {
   const user = getUser();
   if (!user) redirect('/api/auth/discord?next=/compte');
   const myBugs = bugsOf(user.discord_id);
+  const myIdeas = ideasOf(user.discord_id);
   const orders = db().prepare('SELECT * FROM orders WHERE user_id = ? OR discord_id = ? ORDER BY created_at DESC').all(user.id, user.discord_id);
   const items = db().prepare(`SELECT oi.*, o.status, o.created_at FROM order_items oi JOIN orders o ON o.id = oi.order_id
     WHERE (o.user_id = ? OR o.discord_id = ?) ORDER BY o.created_at DESC`).all(user.id, user.discord_id);
@@ -73,6 +76,21 @@ export default async function Account() {
               ))}
             </div>
           ) : <p className="muted">Aucune commande.</p>}
+        </section>
+
+        <section>
+          <h3 style={{ marginBottom: 18 }}>Mes idées</h3>
+          {myIdeas.length ? (
+            <div className="rows">
+              {myIdeas.map((x) => (
+                <div className="rw" key={x.id}>
+                  <b>{x.title}</b>
+                  <span className="p">▲ {x.up - x.down}</span>
+                  <span className="d">{IDEA_STATUS[x.status]?.emoji} {IDEA_STATUS[x.status]?.label}{x.note ? ` · ${x.note}` : ''}</span>
+                </div>
+              ))}
+            </div>
+          ) : <p className="muted">Un script te manque ? <a href="/idees">Propose une idée</a>, la communauté vote.</p>}
         </section>
 
         {myBugs.length ? (

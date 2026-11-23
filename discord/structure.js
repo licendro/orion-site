@@ -62,8 +62,7 @@ export const LAYOUT = [
   { key: 'catCommunity', name: '💬 COMMUNAUTÉ', mode: 'public', channels: [
     { key: 'chat', name: '💬・discussion', type: T, topic: 'Discussion générale, dans le respect du règlement.' },
     { key: 'media', name: '📸・médias', type: T, topic: 'Captures, clips et vidéos de vos serveurs.', slowmode: 30 },
-    { key: 'suggestions', name: '💡・suggestions', type: F, topic: 'Une idée de script ou d’amélioration ? Un post par idée. Votez avec 👍 / 👎.',
-      reaction: '👍',
+    { key: 'suggestions', name: '💡・suggestions', type: F, topic: 'Une idée de script ou d’amélioration ? Un post par idée (ou /idee, ou sur le site : jdev-hub.fr/idees). Votez avec les boutons 👍 / 👎 sous chaque idée.',
       tags: [
         { name: 'Nouveau script', emoji: '💡' }, { name: 'Amélioration', emoji: '🛠️' }, { name: 'Site', emoji: '🌐' }, { name: 'Discord', emoji: '💬' },
         { name: 'En attente', emoji: '⏳', moderated: true }, { name: 'Acceptée', emoji: '✅', moderated: true },

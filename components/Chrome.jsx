@@ -14,7 +14,7 @@ export function Header({ banner, user, admin, canLogin }) {
             <a href="/services">Services</a>
             <a href="/docs">Docs</a>
             <a href="/essai">Essayer</a>
-            <a href="/#faq">FAQ</a>
+            <a href="/idees">Idées</a>
           </nav>
           <div className="navr">
             {admin ? <a className="btn sm" href="/admin">Admin</a> : null}
@@ -45,7 +45,7 @@ export function Footer({ discord }) {
         </div>
         <div><h5>Boutique</h5><a href="/#scripts">Tous les scripts</a><a href="/#pack">Packs</a><a href="/compte">Mes scripts</a></div>
         <div><h5>Services</h5><a href="/services#sur-mesure">Sur mesure</a><a href="/services#partenariat">Développeur partenaire</a><a href="/services#bot">Bot Discord</a><a href="/services#devis">Demander un devis</a></div>
-        <div><h5>Aide</h5><a href="/docs">Documentation</a><a href="/bugs">Problèmes connus</a><a href="/essai">Serveur de test</a><a href="/#faq">FAQ</a><a href="/compte">Mon compte</a><a href="/mentions-legales">Mentions légales</a></div>
+        <div><h5>Aide</h5><a href="/docs">Documentation</a><a href="/idees">Proposer une idée</a><a href="/bugs">Problèmes connus</a><a href="/essai">Serveur de test</a><a href="/#faq">FAQ</a><a href="/compte">Mon compte</a><a href="/mentions-legales">Mentions légales</a></div>
         <div><h5>Communauté</h5><a href={discord} rel="noopener" target="_blank">Discord</a><a href="https://portal.cfx.re" rel="noopener" target="_blank">Keymaster</a></div>
       </div>
       <div className="wrap legal"><span>© {year} Orion. Non affilié à Rockstar Games, Take-Two ou Cfx.re.</span><span>Paiements sécurisés par Tebex.</span></div>

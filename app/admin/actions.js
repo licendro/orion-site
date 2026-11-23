@@ -239,6 +239,32 @@ export async function resyncCustomer(fd) {
   go('/admin/clients', 'Rôle et salon resynchronisés par le bot.');
 }
 
+// ---------- Idées ----------
+const IDEA_STATES = ['nouvelle', 'etude', 'prevue', 'dev', 'sortie', 'refusee'];
+export async function saveIdea(fd) {
+  const who = admin('ideas');
+  const id = Number(fd.get('id'));
+  const x = db().prepare('SELECT * FROM ideas WHERE id = ?').get(id);
+  if (!x) go('/admin/idees', 'Idée introuvable.', true);
+  const status = IDEA_STATES.includes(str(fd, 'status')) ? str(fd, 'status') : x.status;
+  const released = str(fd, 'released', 80) || null;
+  if (status === 'sortie' && !released) go(`/admin/idees/${id}`, 'Choisis le script sorti pour cette idée.', true);
+  db().prepare(`UPDATE ideas SET title = ?, description = ?, kind = ?, status = ?, note = ?, released_key = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+    .run(str(fd, 'title', 100) || x.title, str(fd, 'description', 1500) || null, ['script', 'amelioration', 'autre'].includes(str(fd, 'kind')) ? str(fd, 'kind') : x.kind,
+      status, str(fd, 'note', 500) || (x.status === status ? x.note : null), status === 'sortie' ? released : x.released_key, id);
+  addJob('idea.changed', { id, old: x.status });
+  audit(who, 'idée.modifiée', `#${id}`, x.status === status ? 'détails' : `${x.status} → ${status}`);
+  go(`/admin/idees/${id}`, x.status === status ? 'Idée mise à jour.' : 'Statut changé : l’auteur et ceux qui ont voté pour sont prévenus.');
+}
+
+export async function deleteIdea(fd) {
+  const who = admin('ideas');
+  const id = Number(fd.get('id'));
+  db().prepare('DELETE FROM ideas WHERE id = ?').run(id);
+  audit(who, 'idée.supprimée', `#${id}`, null);
+  go('/admin/idees', `Idée #${id} supprimée (supprime le post Discord à la main si besoin).`);
+}
+
 // ---------- Bugs ----------
 const BUG_STATES = ['nouveau', 'confirme', 'en_cours', 'corrige', 'publie', 'refuse', 'doublon'];
 export async function saveBug(fd) {

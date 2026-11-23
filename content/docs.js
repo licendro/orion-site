@@ -191,7 +191,10 @@ Ouvrez un ticket **Support** sur Discord avec : le nom et la version du script, 
   {
     slug: 'support', category: 'Discord et support', sort: 30, title: 'Obtenir de l’aide',
     summary: 'Tickets, assistant automatique, équipe et délais de réponse.',
-    body: `## Signaler un bug
+    body: `## Proposer une idée de script
+Sur la page [Idées](/idees) (connexion Discord), avec la commande **/idee** sur Discord, ou en postant directement dans **#suggestions**. Votez 👍 / 👎 pour les idées des autres : les plus demandées passent en développement. L’auteur et ceux qui ont voté 👍 reçoivent un message privé à chaque étape, jusqu’à la sortie du script.
+
+## Signaler un bug
 Postez dans **#bug-report** sur Discord (un post par bug : script, version, framework, ce qui se passe, erreurs F8 / console), ou ouvrez un ticket **Bug**. Une fois le bug vérifié, l’équipe crée sa **fiche** : vous recevez un message privé à chaque étape (confirmé, en cours, corrigé, publié dans la version X).
 
 Même problème qu’un autre joueur ? Cliquez **🙋 J’ai aussi ce bug** sous sa fiche pour être prévenu vous aussi. La liste des bugs en cours est sur la page [Problèmes connus](/bugs), et chaque fiche script affiche les siens.
