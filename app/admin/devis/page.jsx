@@ -11,14 +11,14 @@ export default function Quotes({ searchParams }) {
   const quotes = db().prepare('SELECT * FROM quotes ORDER BY created_at DESC LIMIT 200').all();
   return (
     <>
-      <Head title="Devis" sub="Demandes envoyées depuis le formulaire Services (aussi postées dans #devis sur Discord)." />
+      <Head title="Devis" sub="Demandes envoyées depuis la page Services. Chacune ouvre un ticket privé sur Discord avec le client." />
       <Flash searchParams={searchParams} />
       <div className="panel"><div className="tscroll"><table className="tbl">
         <thead><tr><th>Date</th><th>Discord</th><th>Service</th><th>Demande</th><th>Statut</th></tr></thead>
         <tbody>{quotes.length ? quotes.map((q) => (
           <tr key={q.id}>
             <td className="muted">{when(q.created_at)}</td>
-            <td><b>{q.discord}</b></td>
+            <td><b>{q.discord}</b>{q.channel_id && process.env.DISCORD_GUILD_ID ? <div><a className="muted" style={{ fontSize: 12.5 }} href={`https://discord.com/channels/${process.env.DISCORD_GUILD_ID}/${q.channel_id}`}>Ouvrir le ticket ↗</a></div> : null}</td>
             <td>{TYPES[q.type] || q.type}<div className="muted" style={{ fontSize: 12.5 }}>{q.framework} · {q.budget}</div></td>
             <td style={{ whiteSpace: 'pre-line', maxWidth: 440, fontSize: 13.5 }}>{q.message}</td>
             <td>

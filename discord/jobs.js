@@ -26,9 +26,9 @@ export const setSetting = (key, value) =>
   db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, JSON.stringify(value));
 export const addJob = (type, payload) => db.prepare('INSERT INTO jobs (type, payload) VALUES (?, ?)').run(type, JSON.stringify(payload));
 
-class WaitMember extends Error {}
+export class WaitMember extends Error {}
 
-export function startJobs(client, getCfg) {
+export function startJobs(client, getCfg, extra = {}) {
   const cfg = () => getCfg();
   const guild = () => client.guilds.cache.get(process.env.GUILD_ID);
   const staffIds = () => ROLES.filter((r) => r.staff || r.key === 'founder').map((r) => cfg().roles[r.key]).filter(Boolean);
@@ -270,6 +270,8 @@ export function startJobs(client, getCfg) {
         .setDescription(p.on ? `${p.message || 'Le site revient très vite.'}${p.until ? `\n\nRetour prévu : **${p.until}**` : ''}\n\nTes scripts restent disponibles dans ton Keymaster.` : `La boutique est de nouveau accessible : ${site()}`)] });
     },
   };
+
+  Object.assign(handlers, extra);
 
   let running = false;
   async function tick() {

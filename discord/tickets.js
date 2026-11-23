@@ -3,6 +3,7 @@ import {
   ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, ChannelType, EmbedBuilder, MessageFlags, PermissionFlagsBits as P,
 } from 'discord.js';
 import { COLOR, TICKETS } from './structure.js';
+import { WaitMember } from './jobs.js';
 
 const AI_FOOTER = 'Assistant Orion · réponse automatique';
 const MAX_AI_TURNS = 3;           // au-delà, transfert automatique à l'équipe
@@ -71,19 +72,7 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
 
     await i.deferReply({ flags: MessageFlags.Ephemeral });
     const ai = true;
-    const base = `${t.value}-${i.user.username}`.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 80) || `ticket-${t.value}`;
-    const channel = await i.guild.channels.create({
-      name: ai ? `🤖・${base}` : base,
-      type: ChannelType.GuildText,
-      parent: cfg().channels[t.category],
-      topic: `${t.emoji} ${t.label} · ${i.user.tag} · ${marker}`,
-      permissionOverwrites: [
-        { id: i.guild.roles.everyone.id, deny: [P.ViewChannel] },
-        { id: i.user.id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.AttachFiles, P.EmbedLinks] },
-        ...staffIds().map((id) => ({ id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.AttachFiles, P.EmbedLinks, P.ManageMessages] })),
-        { id: client.user.id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.ManageChannels, P.EmbedLinks, P.ManageMessages] },
-      ],
-    });
+    const channel = await createChannel(i.guild, i.user, t, ai ? '🤖' : '');
     db.prepare('INSERT INTO tickets (channel_id, discord_id, type, status, last_activity) VALUES (?, ?, ?, ?, ?)')
       .run(channel.id, i.user.id, t.value, ai ? 'ai' : 'staff', Date.now());
 
@@ -100,6 +89,59 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
     });
     await logTo('logs', new EmbedBuilder().setColor(COLOR).setDescription(`🎫 Ticket **${t.label}** ouvert par <@${i.user.id}> : <#${channel.id}>`).setTimestamp());
     return i.editReply(`✅ Ton ticket est ouvert : <#${channel.id}>`);
+  }
+
+  async function createChannel(guild, user, t, prefix) {
+    const base = `${t.value === 'custom' || t.value === 'partner' ? 'devis' : t.value}-${user.username}`.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 80) || `ticket-${t.value}`;
+    return guild.channels.create({
+      name: prefix ? `${prefix}・${base}` : base,
+      type: ChannelType.GuildText,
+      parent: cfg().channels[t.category],
+      topic: `${t.emoji} ${t.label} · ${user.tag} · uid:${user.id};type:${t.value}`,
+      permissionOverwrites: [
+        { id: guild.roles.everyone.id, deny: [P.ViewChannel] },
+        { id: user.id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.AttachFiles, P.EmbedLinks] },
+        ...staffIds().map((id) => ({ id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.AttachFiles, P.EmbedLinks, P.ManageMessages] })),
+        { id: client.user.id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.ManageChannels, P.EmbedLinks, P.ManageMessages] },
+      ],
+    });
+  }
+
+  // ----- Devis envoyé depuis le site : ticket privé avec le client dedans -----
+  const QUOTE_LABEL = { 'sur-mesure': 'Script sur mesure', partenariat: 'Partenariat serveur', bot: 'Bot Discord', carte: 'Service à la carte', other: 'Autre' };
+  async function quoteTicket({ quote_id }) {
+    const q = db.prepare('SELECT * FROM quotes WHERE id = ?').get(quote_id);
+    if (!q?.discord_id || q.channel_id) return;
+    const guild = client.guilds.cache.get(process.env.GUILD_ID);
+    const member = await guild.members.fetch(q.discord_id).catch(() => null);
+    if (!member) throw new WaitMember('Le client n’est pas encore sur le serveur Discord');
+    const t = TICKETS.find((x) => x.value === (q.type === 'partenariat' ? 'partner' : 'custom'));
+    const embed = new EmbedBuilder().setColor(COLOR).setTitle(`📝 Demande de devis · ${QUOTE_LABEL[q.type] || 'Autre'}`)
+      .setDescription(q.message.slice(0, 3500))
+      .addFields({ name: 'Framework', value: q.framework || '—', inline: true }, { name: 'Budget', value: q.budget || '—', inline: true })
+      .setFooter({ text: `Devis n°${q.id} · envoyé depuis le site` }).setTimestamp();
+
+    // Ticket devis déjà ouvert pour ce client : on ajoute la demande dedans
+    let channel = guild.channels.cache.find((c) => c.topic?.includes(`uid:${q.discord_id};type:${t.value}`));
+    const roles = supportRoles();
+    if (channel) {
+      await channel.send({ content: roles.map((id) => `<@&${id}>`).join(' ') || undefined, allowedMentions: { roles }, embeds: [embed] });
+    } else {
+      channel = await createChannel(guild, member.user, t, '🔴');
+      db.prepare("INSERT INTO tickets (channel_id, discord_id, type, status, last_activity) VALUES (?, ?, ?, 'staff', ?)").run(channel.id, q.discord_id, t.value, Date.now());
+      await channel.send({
+        content: `<@${q.discord_id}> ${roles.map((id) => `<@&${id}>`).join(' ')}`,
+        allowedMentions: { users: [q.discord_id], roles },
+        embeds: [
+          new EmbedBuilder().setColor(COLOR).setDescription(`Merci <@${q.discord_id}> pour ta demande de devis ! L’équipe te répond **ici** sous 24 h avec un prix et un délai. Tu peux ajouter des détails, captures ou exemples dans ce salon.`),
+          embed, clientSheet(q.discord_id, member),
+        ],
+        components: [buttons(false)],
+      });
+      await logTo('quotes', new EmbedBuilder().setColor(COLOR).setDescription(`📝 Devis n°${q.id} de <@${q.discord_id}> : <#${channel.id}>`).setTimestamp());
+    }
+    db.prepare("UPDATE quotes SET channel_id = ?, status = CASE WHEN status = 'nouveau' THEN 'en cours' ELSE status END WHERE id = ?").run(channel.id, q.id);
+    await member.send(`📝 Ta demande de devis Orion est bien reçue. On te répond ici : <#${channel.id}>`).catch(() => {});
   }
 
   async function logTo(key, embed) {
@@ -275,6 +317,7 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
 
   return {
     open, button, message, adopt,
+    jobs: { 'quote.ticket': quoteTicket },
     start() { setInterval(() => sweep().catch((e) => console.error('[tickets]', e.message)), 10 * 60e3); },
   };
 }

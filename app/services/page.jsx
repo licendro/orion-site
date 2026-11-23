@@ -3,6 +3,7 @@ import QuoteForm, { QuoteButton } from '../../components/QuoteForm';
 import { SubscribeButton } from '../../components/Shop';
 import { getCatalog } from '../../lib/catalog';
 import { keyOf } from '../../lib/format';
+import { getUser } from '../../lib/auth';
 
 export const metadata = {
   title: 'Services',
@@ -46,6 +47,7 @@ function Offer({ o, subs }) {
 }
 
 export default async function Services() {
+  const user = await getUser();
   const { products } = await getCatalog();
   const subs = new Set(products.filter((p) => p.subscription).map((p) => p.key));
   return (
@@ -80,8 +82,8 @@ export default async function Services() {
           </div>
 
           <div className="quote" id="devis">
-            <div><h3>Demander un devis</h3><p className="sub" style={{ fontSize: 16 }}>Choisissez une formule ci-dessus ou décrivez votre besoin. On vous répond sur Discord sous 24 h.</p></div>
-            <QuoteForm />
+            <div><h3>Demander un devis</h3><p className="sub" style={{ fontSize: 16 }}>Choisissez une formule ci-dessus ou décrivez votre besoin. Un ticket privé s’ouvre sur notre Discord, on vous y répond sous 24 h.</p></div>
+            <QuoteForm user={user ? { username: user.username } : null} />
           </div>
         </div>
       </section>

@@ -53,7 +53,7 @@ const COMMANDS = [
 client.once(Events.ClientReady, async (c) => {
   console.log(`✓ Bot connecté : ${c.user.tag}`);
   c.user.setPresence({ activities: [{ name: 'jdev-hub.fr', type: 3 }], status: 'online' });
-  jobs = startJobs(client, () => cfg);
+  jobs = startJobs(client, () => cfg, tickets.jobs);
   try {
     const guild = await c.guilds.fetch(process.env.GUILD_ID);
     await guild.commands.set([...COMMANDS, ...MOD_COMMANDS].map((x) => x.toJSON()));
