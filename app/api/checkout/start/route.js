@@ -20,7 +20,7 @@ export async function POST(req) {
     const site = siteUrl();
     const basket = await createBasket({
       completeUrl: `${site}/merci`,
-      cancelUrl: `${site}/#scripts`,
+      cancelUrl: `${site}/scripts`,
       ip,
       custom: { source: 'orion-site', discord_id: user?.discord_id || null, user_id: user?.id || null },
     });

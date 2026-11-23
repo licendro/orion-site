@@ -1,10 +1,22 @@
+// Polices hébergées sur notre serveur (aucune requête vers Google : conforme RGPD)
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter-tight/500.css';
+import '@fontsource/inter-tight/600.css';
+import '@fontsource/inter-tight/700.css';
+import '@fontsource/michroma/400.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
 import './globals.css';
 import { headers } from 'next/headers';
 import { getCatalog } from '../lib/catalog';
 import { db, getSetting } from '../lib/db';
 import { avatarUrl, discordConfigured, getUser, isAdmin } from '../lib/auth';
 import { ShopProvider } from '../components/Shop';
-import { Header, Footer } from '../components/Chrome';
+import { Footer } from '../components/Chrome';
+import NavBar from '../components/NavBar';
+import Consent from '../components/Consent';
 import { Brand } from '../components/Logo';
 import SpaceLayer from '../components/Space';
 
@@ -19,7 +31,7 @@ export const metadata = {
   twitter: { card: 'summary_large_image' },
 };
 
-export const viewport = { themeColor: '#030407' };
+export const viewport = { themeColor: '#030407', viewportFit: 'cover' };
 export const dynamic = 'force-dynamic';
 
 function Maintenance({ message, until, discord }) {
@@ -44,11 +56,7 @@ export default async function RootLayout({ children }) {
   const inAdmin = path.startsWith('/admin');
 
   const head = (
-    <head>
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600&family=Michroma&family=JetBrains+Mono:wght@400;500&display=swap" />
-    </head>
+    <head />
   );
 
   if (maintenance && !admin) {
@@ -69,14 +77,16 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="fr">
       {head}
-      <body>
+      <body className={inAdmin ? 'adm' : 'site'}>
         <SpaceLayer off={inAdmin} />
         <ShopProvider products={products} mode={mode} user={u} owned={owned} loginRequired={discordConfigured() && !user}>
           {inAdmin ? children : (
             <>
-              <Header banner={banner} user={u} admin={admin} canLogin={discordConfigured()} />
+              <NavBar user={u} admin={admin} canLogin={discordConfigured()} discord={discord} />
+              {banner ? <div className="demo">{banner}</div> : null}
               {children}
               <Footer discord={discord} />
+              <Consent />
             </>
           )}
         </ShopProvider>

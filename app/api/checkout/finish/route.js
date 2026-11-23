@@ -1,3 +1,6 @@
+import { db } from '../../../../lib/db';
+import { getUser } from '../../../../lib/auth';
+import { CGV_VERSION } from '../../../../content/legal';
 import { getCatalog } from '../../../../lib/catalog';
 import { addPackage, applyCoupon, applyCreatorCode, getBasket, removePackage, tebexEnabled } from '../../../../lib/tebex';
 import { notify } from '../../../../lib/alerts';
@@ -16,6 +19,9 @@ export async function POST(req) {
   const items = Array.isArray(body.items) ? body.items.slice(0, 30) : [];
   const userCoupon = typeof body.coupon === 'string' ? body.coupon.trim().toUpperCase().slice(0, 40) : '';
   if (!ident || !items.length) return json({ error: 'Panier invalide.' }, 400);
+  // Acceptation des CGV et renonciation au droit de rétractation (contenu numérique) : obligatoire et conservée comme preuve
+  if (body.accept !== CGV_VERSION) return json({ error: 'Accepte les conditions générales de vente pour continuer (recharge la page si besoin).' }, 400);
+  const user = getUser();
 
   const { products } = await getCatalog();
   const chosen = items.map((k) => products.find((p) => p.key === k)).filter((p) => p && p.tebexId);
@@ -47,6 +53,8 @@ export async function POST(req) {
       try { await applyCreatorCode(ident, creator); } catch (e) { warnings.push(`Code créateur ${creator} refusé : ${e.message}`); }
     }
     basket = await getBasket(ident);
+    db().prepare('INSERT INTO checkout_consents (basket, discord_id, cgv_version, items, waiver) VALUES (?, ?, ?, ?, ?)')
+      .run(ident, user?.discord_id || null, CGV_VERSION, chosen.map((p) => p.name).join(', '), chosen.some((p) => !p.subscription) ? 1 : 0);
     return json({ checkoutUrl: basket.links?.checkout || null, total: basket.total_price, warnings });
   } catch (e) {
     console.error('[checkout/finish]', e.status, e.message);

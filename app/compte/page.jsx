@@ -5,6 +5,7 @@ import { getFullCatalog } from '../../lib/catalog';
 import { eur } from '../../lib/format';
 import BugList from '../../components/BugList';
 import { bugsOf } from '../../lib/bugs';
+import { deleteMyAccount } from './actions';
 import { ideasOf } from '../../lib/ideas';
 import { IDEA_STATUS } from '../../db/ideas.mjs';
 
@@ -13,10 +14,11 @@ export const dynamic = 'force-dynamic';
 
 const STATUS = { paid: 'Payée', refunded: 'Remboursée', chargeback: 'Litige' };
 
-export default async function Account() {
+export default async function Account({ searchParams }) {
   const user = getUser();
   if (!user) redirect('/api/auth/discord?next=/compte');
   const myBugs = bugsOf(user.discord_id);
+  const subs = db().prepare("SELECT COUNT(*) n FROM subscriptions WHERE discord_id = ? AND status IN ('active','cancelling')").get(user.discord_id).n;
   const myIdeas = ideasOf(user.discord_id);
   const orders = db().prepare('SELECT * FROM orders WHERE user_id = ? OR discord_id = ? ORDER BY created_at DESC').all(user.id, user.discord_id);
   const items = db().prepare(`SELECT oi.*, o.status, o.created_at FROM order_items oi JOIN orders o ON o.id = oi.order_id
@@ -59,7 +61,7 @@ export default async function Account() {
               })}
             </div>
           ) : (
-            <div className="empty">Aucun script pour le moment. <a className="btn sm" href="/#scripts">Voir le catalogue</a></div>
+            <div className="empty">Aucun script pour le moment. <a className="btn sm" href="/scripts">Voir le catalogue</a></div>
           )}
         </section>
 
@@ -99,6 +101,23 @@ export default async function Account() {
             <BugList bugs={myBugs} />
           </section>
         ) : null}
+
+        <section id="donnees">
+          <h3 style={{ marginBottom: 12 }}>Mes données</h3>
+          <p className="muted" style={{ marginTop: 0 }}>Tu peux récupérer tout ce qu’on sait sur toi, ou supprimer ton compte. Détails dans la <a href="/confidentialite">politique de confidentialité</a>.</p>
+          <div className="actions" style={{ flexWrap: 'wrap', gap: 10 }}>
+            <a className="btn" href="/api/account/export">⬇ Télécharger mes données</a>
+          </div>
+          <details className="danger-zone" open={searchParams?.err === 'confirm'}>
+            <summary>Supprimer mon compte</summary>
+            <p>Ton compte, tes devis, tes votes et ton nom sur tes idées et bugs seront effacés, et ton salon privé Discord retiré. Tes scripts restent dans ton Keymaster : la licence appartient à ton compte FiveM. Les commandes sont gardées 10 ans pour la comptabilité, sans lien avec ton compte.{subs ? ' ⚠ Pense à résilier ton abonnement partenaire depuis l’e-mail de Tebex avant.' : ''}</p>
+            {searchParams?.err === 'confirm' ? <p style={{ color: 'var(--acc)' }}>Écris SUPPRIMER pour confirmer.</p> : null}
+            <form action={deleteMyAccount} className="actions" style={{ flexWrap: 'wrap', gap: 10 }}>
+              <input className="field" name="confirm" placeholder="Écris SUPPRIMER" autoComplete="off" style={{ maxWidth: 220 }} />
+              <button className="btn danger">Supprimer définitivement</button>
+            </form>
+          </details>
+        </section>
 
         <div className="warn">
           Tes scripts sont livrés dans ton Keymaster Cfx.re. Le rôle Client et ton salon privé t’attendent sur notre Discord.{' '}

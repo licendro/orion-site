@@ -143,6 +143,27 @@ export function startJobs(client, getCfg, extra = {}) {
       await refreshPanel(ch, m.id);
       if (!silent && !created) await ch.send({ content: `<@${m.id}>`, embeds: [new EmbedBuilder().setColor(0x4ade80).setDescription(`✅ Ajouté à tes scripts : **${names.join(', ')}**`)] });
       await log(`💎 Achat : <@${m.id}> · **${names.join(', ')}** · ${eur(order.total)} → <#${ch.id}>`, 0x4ade80);
+      // Confirmation de commande avec l'accord donné avant le paiement (art. L221-13 du Code de la consommation)
+      if (!silent) {
+        const consent = db.prepare('SELECT * FROM checkout_consents WHERE discord_id = ? ORDER BY id DESC LIMIT 1').get(order.discord_id);
+        const conf = new EmbedBuilder().setColor(COLOR).setTitle('🧾 Confirmation de commande')
+          .setDescription(`Commande **${order.tebex_tx}** · ${eur(order.total)}\nProduits : **${names.join(', ')}**\n\n`
+            + (consent ? `Tu as accepté les CGV (version du ${consent.cgv_version.split('-').reverse().join('/')})${consent.waiver ? ' et demandé la livraison immédiate des scripts dans ton Keymaster, en renonçant au droit de rétractation pour ces contenus numériques' : ''}.\n` : '')
+            + `CGV : ${site()}/cgv · Reçu de paiement : envoyé par e-mail par Tebex.`).setTimestamp();
+        await ch.send({ embeds: [conf] }).catch(() => {});
+        await m.send({ embeds: [conf] }).catch(() => {});
+      }
+    },
+
+    // Compte supprimé sur le site (droit à l'effacement) : on retire son salon privé
+    async 'account.deleted'({ discord_id }) {
+      const row = db.prepare('SELECT * FROM customer_channels WHERE discord_id = ?').get(discord_id);
+      if (row) {
+        const ch = await guild().channels.fetch(row.channel_id).catch(() => null);
+        await ch?.delete('Compte supprimé (RGPD)').catch(() => {});
+        db.prepare('DELETE FROM customer_channels WHERE discord_id = ?').run(discord_id);
+      }
+      await log(`🗑️ Un membre a supprimé son compte du site (données effacées, salon privé retiré).`);
     },
 
     async 'purchase.revoked'({ order_id, reason }) {

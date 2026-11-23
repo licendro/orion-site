@@ -29,7 +29,7 @@ export default async function ProductPage({ params }) {
   return (
     <main className="band" style={{ paddingTop: 'clamp(40px,6vw,72px)' }}>
       <div className="wrap">
-        <div className="crumbs"><a href="/#scripts">Catalogue</a> / {p.catName}</div>
+        <div className="crumbs"><a href="/scripts">Catalogue</a> / {p.catName}</div>
         <div className="pp">
           <Gallery images={images} video={p.video} name={p.name} pos={p.pos} />
           <div className="box">

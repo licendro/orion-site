@@ -227,6 +227,16 @@ CREATE TABLE IF NOT EXISTS bug_followers (
   PRIMARY KEY (bug_id, discord_id)
 );
 
+CREATE TABLE IF NOT EXISTS checkout_consents (
+  id INTEGER PRIMARY KEY,
+  basket TEXT,
+  discord_id TEXT,
+  cgv_version TEXT,
+  items TEXT,
+  waiver INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS ideas (
   id INTEGER PRIMARY KEY,
   title TEXT NOT NULL,

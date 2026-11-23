@@ -122,7 +122,7 @@ export async function createPromotion(fd) {
     addJob('promo.announce', {
       title: name, banner: str(fd, 'banner', 60) || name,
       text: `${type === 'percent' ? `−${value} %` : `−${value} €`} sur ${scope === 'all' ? 'tout le catalogue' : `${keys.length} script(s)`}${ends ? `, jusqu’au ${new Date(parisIso(ends)).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' })}` : ''}.`,
-      url: `${siteUrl()}/#scripts`,
+      url: `${siteUrl()}/scripts`,
     });
   }
   audit(who, 'promo.créée', name, { type, value, scope, coupon });
@@ -237,6 +237,16 @@ export async function resyncCustomer(fd) {
   addJob('customer.resync', { discord_id: id });
   audit(who, 'client.resync', id, null);
   go('/admin/clients', 'Rôle et salon resynchronisés par le bot.');
+}
+
+// ---------- Infos légales ----------
+export async function saveLegal(fd) {
+  const who = admin('settings');
+  const { LEGAL_FIELDS } = await import('../../content/legal');
+  const data = Object.fromEntries(LEGAL_FIELDS.map(([k]) => [k, str(fd, k, 300)]));
+  setSetting('legal', data);
+  audit(who, 'légal.modifié', null, null);
+  go('/admin/legal', 'Informations légales enregistrées.');
 }
 
 // ---------- Idées ----------

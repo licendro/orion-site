@@ -89,7 +89,7 @@ export default function IdeaBoard({ ideas: initial, logged, products }) {
           <label className="full">Détails <span className="hint">Facultatif</span>
             <textarea maxLength={1500} value={f.description} onChange={set('description')} placeholder="Ce que le script ferait, pour quel job, ton framework…" />
           </label>
-          <div className="full"><button className="btn pri" disabled={busy}>{busy ? 'Envoi…' : 'Publier mon idée'}</button></div>
+          <div className="full" style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}><button className="btn pri" disabled={busy}>{busy ? 'Envoi…' : 'Publier mon idée'}</button><span className="muted" style={{ fontSize: 12.5 }}>Ton idée et ton pseudo Discord seront publics, ici et sur notre Discord.</span></div>
         </form>
       ) : null}
 

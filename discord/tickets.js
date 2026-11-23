@@ -318,6 +318,17 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
   return {
     open, button, message, adopt,
     jobs: { 'quote.ticket': quoteTicket },
-    start() { setInterval(() => sweep().catch((e) => console.error('[tickets]', e.message)), 10 * 60e3); },
+    start() {
+      setInterval(() => sweep().catch((e) => console.error('[tickets]', e.message)), 10 * 60e3);
+      // Historique des tickets gardé 3 ans (politique de confidentialité)
+      const purge = async () => {
+        const ch = await client.channels.fetch(cfg().channels.transcripts).catch(() => null);
+        if (!ch) return;
+        const limit = Date.now() - 3 * 365 * 864e5;
+        const batch = await ch.messages.fetch({ after: '0', limit: 50 }).catch(() => null);
+        for (const m of batch?.values() || []) if (m.createdTimestamp < limit) await m.delete().catch(() => {});
+      };
+      setInterval(() => purge().catch(() => {}), 24 * 3600e3);
+    },
   };
 }

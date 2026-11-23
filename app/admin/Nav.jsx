@@ -22,6 +22,7 @@ const LINKS = [
   ['/admin/maintenance', 'Maintenance', 'maintenance'],
   ['/admin/equipe', 'Équipe', 'team'],
   ['/admin/reglages', 'Réglages', 'settings'],
+  ['/admin/legal', 'Infos légales', 'settings'],
   ['/admin/journal', 'Journal', 'journal'],
 ];
 

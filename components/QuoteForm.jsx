@@ -82,6 +82,7 @@ export default function QuoteForm({ user }) {
       <input type="text" name="website" value={f.website} onChange={set('website')} tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: 'absolute', left: '-9999px' }} />
       <div className="full" style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <button className="btn pri" type="submit" disabled={sending}>{sending ? 'Envoi…' : 'Envoyer la demande'}</button>
+        <span className="muted" style={{ fontSize: 12.5 }}>Ta demande sert uniquement à te répondre, et est gardée 3 ans au plus. <a href="/confidentialite">Confidentialité</a></span>
       </div>
       <div className={'qok' + (status ? ' on' : '')} role="status" style={status?.error ? { borderColor: 'rgba(255,122,47,.5)' } : null}>{status?.text}</div>
     </form>

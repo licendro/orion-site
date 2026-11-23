@@ -5,6 +5,7 @@ import { tebexEnabled } from '../../../lib/tebex';
 import { json } from '../../../lib/http';
 import { raise, resolve } from '../../../lib/alerts';
 import { processQueue } from '../../../lib/testserver';
+import { purgeOld } from '../../../lib/account';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,11 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const report = {};
   processQueue(); // fait avancer la file du serveur de test
+  // Durées de conservation RGPD : une fois par jour
+  if (Date.now() - getSetting('purge_at', 0) > 864e5) {
+    setSetting('purge_at', Date.now());
+    report.purge = purgeOld();
+  }
 
   // 1. Bot Discord vivant ?
   const beat = getSetting('bot_heartbeat', 0);

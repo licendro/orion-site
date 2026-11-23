@@ -1,3 +1,4 @@
+import { getLegal } from '../../lib/legal';
 import { db, getSetting } from '../../lib/db';
 import { getFullCatalog } from '../../lib/catalog';
 import { eur } from '../../lib/format';
@@ -6,6 +7,7 @@ import { pluginEnabled } from '../../lib/tebexPlugin';
 import { Head, Status, when } from './ui';
 
 export default async function Dashboard() {
+  const legalMissing = getLegal().missing;
   const d = db();
   const sum = (sql, ...a) => d.prepare(sql).get(...a)?.v || 0;
   const rev30 = sum("SELECT SUM(total) v FROM orders WHERE status = 'paid' AND created_at >= datetime('now', '-30 days')");
@@ -25,6 +27,7 @@ export default async function Dashboard() {
   return (
     <>
       <Head title="Tableau de bord" sub={`Boutique ${mode === 'tebex' ? 'reliée à Tebex' : mode === 'demo' ? 'en mode démo (pas de clé Tebex)' : 'Tebex injoignable'} · ${products.length} produits`} />
+      {legalMissing.length ? <div className="flash err">⚖️ Infos légales incomplètes ({legalMissing.length}) : obligatoires pour vendre en France. <a href="/admin/legal">Compléter →</a></div> : null}
 
       {mode !== 'tebex' || !pluginEnabled() || !getSetting('synced_once', false) || !botOnline || jobErrors || drafts || getSetting('maintenance', false) ? (
         <div className="panel"><h2>À faire</h2><div className="pb" style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>

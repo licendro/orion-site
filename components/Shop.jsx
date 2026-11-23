@@ -1,6 +1,8 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { allowed } from '../lib/consent';
+import { CGV_VERSION } from '../content/legal';
 import { eur } from '../lib/format';
 
 const ShopCtx = createContext(null);
@@ -92,7 +94,18 @@ export function ShopProvider({ products, mode, user, owned = [], loginRequired =
 
   // Code créateur : saisi dans le panier ou apporté par un lien ?ref=CODE (gardé 30 jours)
   const [creator, setCreatorState] = useState('');
-  const setCreator = useCallback((c) => { setCreatorState(c); write(REF, c ? { code: c, t: Date.now() } : null); }, []);
+  // Sans consentement « code créateur », il ne vaut que pour la visite en cours (sessionStorage, comme le panier).
+  const setCreator = useCallback((c) => {
+    setCreatorState(c);
+    try { c ? sessionStorage.setItem(REF, c) : sessionStorage.removeItem(REF); } catch { /* rien */ }
+    write(REF, c && allowed('ref') ? { code: c, t: Date.now() } : null);
+  }, []);
+
+  useEffect(() => {
+    const on = (e) => { if (e.detail?.ref && creator) write(REF, { code: creator, t: Date.now() }); };
+    window.addEventListener('orion:consent', on);
+    return () => window.removeEventListener('orion:consent', on);
+  }, [creator]);
 
   // Compte FiveM (Cfx.re) relié avant le paiement : panier Tebex authentifié, gardé sur l'appareil.
   const [fivem, setFivem] = useState(null);
@@ -151,15 +164,16 @@ export function ShopProvider({ products, mode, user, owned = [], loginRequired =
     }
   }, [mode, loginRequired, toast, saveFivem]);
 
-  const checkout = useCallback(async () => {
+  const checkout = useCallback(async (accept = false) => {
     if (mode !== 'tebex') return toast('Les paiements ouvrent très bientôt. Rejoignez le Discord pour être prévenu.', true);
     if (!cart.length) return;
     if (loginRequired) { window.location.href = '/api/auth/discord?next=' + encodeURIComponent('/?panier=1'); return; }
     if (!fivem) return connectFivem();
+    if (!accept) return toast('Coche la case des conditions de vente pour continuer.', true);
     setBusy(true);
     try {
       const r = await fetch('/api/checkout/finish', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ident: fivem.ident, items: cart, coupon, creator }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ident: fivem.ident, items: cart, coupon, creator, accept: CGV_VERSION }),
       });
       const j = await r.json();
       if (r.status === 409 && j.relogin) { saveFivem(null); throw new Error(j.error); }
@@ -185,7 +199,10 @@ export function ShopProvider({ products, mode, user, owned = [], loginRequired =
       toast(`Code créateur ${ref} appliqué à tes achats`);
     } else {
       const saved = read(REF, null);
-      if (saved && Date.now() - saved.t < 30 * 864e5) setCreatorState(saved.code);
+      let session = null;
+      try { session = sessionStorage.getItem(REF); } catch { /* rien */ }
+      if (session) setCreatorState(session);
+      else if (saved && Date.now() - saved.t < 30 * 864e5 && allowed('ref')) setCreatorState(saved.code);
     }
     const back = url.searchParams.get('fivem');
     const saved = read(FIVEM, null);
@@ -265,6 +282,9 @@ function CartDrawer() {
   const [code, setCode] = useState(coupon);
   useEffect(() => setCode(coupon), [coupon]);
   const saveCode = (e) => { e.preventDefault(); setCoupon(code.trim().toUpperCase()); };
+  const [accept, setAccept] = useState(false);
+  const hasSub = lines.some((p) => p.subscription);
+  const hasDigital = lines.some((p) => !p.subscription);
 
   return (
     <>
@@ -287,7 +307,7 @@ function CartDrawer() {
           )) : (
             <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--ink3)' }}>
               Votre panier est vide.<br />
-              <a className="btn sm" href="/#scripts" onClick={() => setOpen(false)} style={{ marginTop: 16 }}>Voir les scripts</a>
+              <a className="btn sm" href="/scripts" onClick={() => setOpen(false)} style={{ marginTop: 16 }}>Voir les scripts</a>
             </div>
           )}
         </div>
@@ -320,8 +340,16 @@ function CartDrawer() {
                       : <button className="btn sm" onClick={connectFivem} disabled={busy || !user}>Connecter</button>}
                   </div>
                 </div>
-                <button className="btn pri" onClick={checkout} disabled={busy || !user || !fivem}>
-                  {busy ? 'Un instant…' : !user ? 'Connecte Discord pour continuer' : !fivem ? 'Connecte FiveM pour payer' : `Payer ${eur(total).replace('Gratuit', '0,00 €')}`}
+                <label className="cgv">
+                  <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
+                  <span>
+                    J’ai lu et j’accepte les <a href="/cgv" target="_blank">conditions générales de vente</a>.
+                    {hasDigital ? ' Je demande la livraison immédiate des scripts dans mon Keymaster et je reconnais perdre mon droit de rétractation dès cette livraison.' : ''}
+                    {hasSub ? ' Je demande que l’abonnement partenaire commence immédiatement : si je me rétracte sous 14 jours, je paierai la part du service déjà fournie.' : ''}
+                  </span>
+                </label>
+                <button className="btn pri" onClick={() => checkout(accept)} disabled={busy || !user || !fivem || !accept}>
+                  {busy ? 'Un instant…' : !user ? 'Connecte Discord pour continuer' : !fivem ? 'Connecte FiveM pour payer' : `Commander avec obligation de paiement · ${eur(total).replace('Gratuit', '0,00 €')}`}
                 </button>
               </>
             ) : (
