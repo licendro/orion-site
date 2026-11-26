@@ -5,7 +5,9 @@ import { getFullCatalog } from '../../lib/catalog';
 import { eur } from '../../lib/format';
 import BugList from '../../components/BugList';
 import { bugsOf } from '../../lib/bugs';
-import { deleteMyAccount } from './actions';
+import { changeMyIp, deleteMyAccount } from './actions';
+import LicenceKey from './LicenceKey';
+import { licencesEnabled, myLicences } from '../../lib/licences';
 import { ideasOf } from '../../lib/ideas';
 import { IDEA_STATUS } from '../../db/ideas.mjs';
 
@@ -20,6 +22,7 @@ export default async function Account({ searchParams }) {
   const myBugs = bugsOf(user.discord_id);
   const subs = db().prepare("SELECT COUNT(*) n FROM subscriptions WHERE discord_id = ? AND status IN ('active','cancelling')").get(user.discord_id).n;
   const myIdeas = ideasOf(user.discord_id);
+  const licences = licencesEnabled() ? await myLicences(user.discord_id).catch(() => null) : [];
   const orders = db().prepare('SELECT * FROM orders WHERE user_id = ? OR discord_id = ? ORDER BY created_at DESC').all(user.id, user.discord_id);
   const items = db().prepare(`SELECT oi.*, o.status, o.created_at FROM order_items oi JOIN orders o ON o.id = oi.order_id
     WHERE (o.user_id = ? OR o.discord_id = ?) ORDER BY o.created_at DESC`).all(user.id, user.discord_id);
@@ -79,6 +82,40 @@ export default async function Account({ searchParams }) {
             </div>
           ) : <p className="muted">Aucune commande.</p>}
         </section>
+
+        {licences === null || licences.length ? (
+          <section id="licences">
+            <h3 style={{ marginBottom: 6 }}>Mes licences</h3>
+            <p className="muted" style={{ marginTop: 0 }}>Ajoute la ligne <code>set orn_licence_…</code> dans ton server.cfg, après <code>ensure orn_lib</code>. La licence se lie à l’IP de ton serveur au premier démarrage.</p>
+            {searchParams?.ok ? <div className="flash">{searchParams.ok}</div> : null}
+            {searchParams?.err ? <div className="flash err">{searchParams.err}</div> : null}
+            {licences === null ? <p className="muted">Le service des licences ne répond pas pour le moment, réessaie dans quelques minutes.</p> : (
+              <div className="lics">
+                {licences.map((l) => {
+                  const wait = l.next_ip_change && l.next_ip_change > Date.now();
+                  return (
+                    <div className={`lic s-${l.status}`} key={l.id}>
+                      <div className="lic-h">
+                        <b>{l.title || l.script}</b>
+                        <span className={`st s-${l.status}`}>{l.status === 'active' ? '🟢 Active' : l.status === 'suspended' ? '🟠 Suspendue' : '🔴 Révoquée'}</span>
+                        <span className="muted">{l.latest ? `Dernière version v${l.latest}` : ''}{l.last_version ? ` · ton serveur : v${l.last_version}` : ''}</span>
+                        <a href={`/changelog/${l.script}`}>Changelog →</a>
+                      </div>
+                      <LicenceKey value={l.key} script={l.script} />
+                      <form action={changeMyIp} className="lic-ip">
+                        <input type="hidden" name="id" value={l.id} />
+                        <span>IP liée : <b className="mono">{l.ip || 'pas encore liée'}</b></span>
+                        <input className="field mono" name="ip" placeholder="Nouvelle IP (vide = au prochain démarrage)" disabled={wait || l.status !== 'active'} />
+                        <button className="btn sm" disabled={wait || l.status !== 'active'}>Changer</button>
+                        {wait ? <span className="muted" style={{ fontSize: 12.5 }}>Prochain changement possible le {new Date(l.next_ip_change).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' })}</span> : <span className="muted" style={{ fontSize: 12.5 }}>1 changement tous les 7 jours</span>}
+                      </form>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        ) : null}
 
         <section>
           <h3 style={{ marginBottom: 18 }}>Mes idées</h3>

@@ -223,10 +223,13 @@ export function startJobs(client, getCfg, extra = {}) {
     },
 
     async 'script.updated'(p) {
-      const notes = p.notes.split('\n').map((l) => l.trim()).filter(Boolean).map((l) =>
+      let notes = p.notes.split('\n').map((l) => l.trim()).filter(Boolean).map((l) =>
         l.startsWith('+') ? `🟢 ${l.slice(1).trim()}` : l.startsWith('-') ? `🔴 ${l.slice(1).trim()}` : l.startsWith('~') ? `🟠 ${l.slice(1).trim()}` : `• ${l}`).join('\n');
       // Bugs corrigés dans cette version (passés en « publié » par le site)
       const fixed = p.fixed || [];
+      const KL = { ajout: '🆕 Ajout', amelioration: '✨ Amélioration', correctif: '🛠️ Correctif' };
+      const badges = (p.kinds || []).map((k) => KL[k]).filter(Boolean).join(' · ');
+      notes = (badges ? `**${badges}**\n\n` : '') + notes + `\n\n[Voir le changelog complet](${site()}/changelog)`;
       const fixedText = fixed.length ? `\n\n**🐞 Bugs corrigés**\n${fixed.map((b) => `✅ #${b.id} ${b.title}`).join('\n')}` : '';
       const embed = () => new EmbedBuilder().setColor(COLOR).setTitle(`📝 ${p.name} · v${p.version}`).setURL(p.url).setDescription((notes + fixedText).slice(0, 4000))
         .setThumbnail(p.image || logo()).setFooter({ text: 'Mise à jour disponible dans ton Keymaster', iconURL: logo() }).setTimestamp();

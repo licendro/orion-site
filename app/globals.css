@@ -638,3 +638,46 @@ body.site{padding-top:86px}
 .ltbl th,.ltbl td{border:1px solid var(--line);padding:10px;text-align:left;vertical-align:top;color:var(--ink2)}
 .ltbl thead th{color:var(--ink);background:rgba(237,239,243,.04)}
 .ltbl tbody th{color:var(--ink);font-weight:600}
+
+/* Licences (espace client) */
+.lics{display:flex;flex-direction:column;gap:12px}
+.lic{border:1px solid var(--line);border-radius:14px;padding:16px;background:rgba(7,8,12,.6);display:flex;flex-direction:column;gap:12px}
+.lic.s-revoked{opacity:.65}
+.lic-h{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
+.lic-h b{font-size:16px}
+.lic-h a{margin-left:auto;font-size:13.5px;color:var(--acc);text-decoration:none}
+.lic-h .muted{font-size:13px}
+.lkey{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lkey code{font-size:14px;padding:8px 12px;border:1px solid var(--line2);border-radius:9px;background:rgba(0,0,0,.35);letter-spacing:.04em}
+.lic-ip{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;color:var(--ink2)}
+.lic-ip .field{max-width:240px;min-height:34px}
+
+/* Changelog */
+.cl-scripts{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.cl-scripts a{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:rgba(7,8,12,.6);text-decoration:none;color:var(--ink)}
+.cl-scripts a:hover{border-color:rgba(255,122,47,.45)}
+.cl-scripts .mono{color:var(--acc);font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chipf{padding:7px 14px;border-radius:999px;border:1px solid var(--line2);color:var(--ink2);text-decoration:none;font-size:13.5px}
+.chipf.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.vers{display:flex;flex-direction:column}
+.ver{display:grid;grid-template-columns:140px 1fr;gap:24px;padding:26px 0;border-bottom:1px solid var(--line)}
+.ver-side{display:flex;flex-direction:column;gap:4px}
+.ver-n{font-size:18px;color:var(--ink);text-decoration:none;font-weight:500}
+.ver-side time{color:var(--ink3);font-size:13px}
+.ver-body h3{margin:0 0 8px;font-size:18px}
+.ver-body h3 a{color:var(--ink);text-decoration:none}
+.vbadges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.vbadge{font:600 11.5px Inter;letter-spacing:.04em;text-transform:uppercase;padding:4px 9px;border-radius:6px;border:1px solid}
+.vbadge.k-ajout{color:#86efac;border-color:rgba(134,239,172,.35);background:rgba(134,239,172,.08)}
+.vbadge.k-amelioration{color:#9cc4ff;border-color:rgba(156,196,255,.35);background:rgba(156,196,255,.08)}
+.vbadge.k-correctif{color:#ffb38a;border-color:rgba(255,122,47,.4);background:rgba(255,122,47,.08)}
+.ver .md{color:var(--ink2);font-size:15px;line-height:1.65}
+.ver .md ul{margin:0;padding-left:0;list-style:none}
+.ver .md li{position:relative;padding-left:18px;margin:4px 0}
+.ver .md li::before{content:"";position:absolute;left:3px;top:.65em;width:6px;height:6px;border-radius:50%;background:var(--ink3)}
+.ver .md li:has(.cdot)::before{display:none}
+.ver .md .cdot{position:absolute;left:2px;top:.6em;width:8px;height:8px;border-radius:50%}
+.ver .md .cd-add{background:#4ade80}.ver .md .cd-imp{background:#6eaaff}.ver .md .cd-fix{background:var(--acc)}
+.ver .md code{font-size:13px;background:rgba(237,239,243,.06);padding:1px 6px;border-radius:5px}
+@media(max-width:640px){.ver{grid-template-columns:1fr;gap:8px}.ver-side{flex-direction:row;align-items:baseline;gap:12px}}

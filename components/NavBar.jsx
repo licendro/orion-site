@@ -34,6 +34,7 @@ const MORE = [
   ['/idees', 'Idées', 'ideas'],
   ['/docs', 'Documentation', 'docs'],
   ['/essai', 'Serveur de test', 'test'],
+  ['/changelog', 'Changelog', 'docs'],
   ['/bugs', 'Problèmes connus', 'bug'],
   ['/faq', 'FAQ', 'faq'],
 ];

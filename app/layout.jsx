@@ -77,7 +77,7 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="fr">
       {head}
-      <body className={inAdmin ? 'adm' : 'site'}>
+      <body className={inAdmin ? 'in-admin' : 'site'}>
         <SpaceLayer off={inAdmin} />
         <ShopProvider products={products} mode={mode} user={u} owned={owned} loginRequired={discordConfigured() && !user}>
           {inAdmin ? children : (

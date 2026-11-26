@@ -11,6 +11,7 @@ const LINKS = [
   ['/admin/commandes', 'Commandes', 'orders'],
   ['/admin/clients', 'Clients', 'clients'],
   ['sep', 'Discord'],
+  ['/admin/licences', 'Licences', 'licences'],
   ['/admin/mises-a-jour', 'Mises à jour', 'updates'],
   ['/admin/annonces', 'Annonces', 'announcements'],
   ['sep', 'Site'],
