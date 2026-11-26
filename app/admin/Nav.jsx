@@ -12,6 +12,7 @@ const LINKS = [
   ['/admin/clients', 'Clients', 'clients'],
   ['sep', 'Discord'],
   ['/admin/licences', 'Licences', 'licences'],
+  ['/admin/ia', 'Assistant IA', 'ai'],
   ['/admin/mises-a-jour', 'Mises à jour', 'updates'],
   ['/admin/annonces', 'Annonces', 'announcements'],
   ['sep', 'Site'],

@@ -6,6 +6,20 @@ const logo = () => `${site()}/logo.png`;
 const base = () => new EmbedBuilder().setColor(COLOR).setFooter({ text: 'Orion Scripts', iconURL: logo() });
 
 // ch(key) renvoie la mention d'un salon : <#id>
+// Règlement du serveur (affiché dans #règlement et lu par l'assistant IA des tickets)
+export const RULES_TEXT = [
+            '**1. Respect.** Aucune insulte, provocation, discrimination ou harcèlement, en public comme en message privé.',
+            '**2. Pas de spam.** Pas de flood, de majuscules en continu ni de mentions inutiles du staff.',
+            '**3. Pas de publicité.** Aucune pub pour un serveur, un shop ou un Discord sans accord du staff, y compris en MP.',
+            '**4. Pas de leak.** Partager, revendre ou demander nos scripts (ou ceux d’autres créateurs) en dehors de Tebex = bannissement définitif et licence révoquée.',
+            '**5. Le bon salon.** Bugs dans 🐞 bug-report, idées dans 💡 suggestions, aide privée via un ticket.',
+            '**6. Support.** Le support passe par les tickets, pas par MP. Pour un script acheté, ouvre un ticket « Support ».',
+            '**7. Contenu.** Pas de contenu NSFW, choquant ou illégal. Pseudos et avatars corrects.',
+            '**8. Le staff a le dernier mot.** En cas de doute, demande à un modérateur.',
+            '',
+            'Les conditions d’utilisation de Discord s’appliquent : discord.com/terms',
+          ].join('\n');
+
 export function buildPost(key, ch) {
   switch (key) {
     case 'welcome':
@@ -32,18 +46,7 @@ export function buildPost(key, ch) {
     case 'rules':
       return {
         embeds: [
-          base().setTitle('📜 Règlement du serveur').setDescription([
-            '**1. Respect.** Aucune insulte, provocation, discrimination ou harcèlement, en public comme en message privé.',
-            '**2. Pas de spam.** Pas de flood, de majuscules en continu ni de mentions inutiles du staff.',
-            '**3. Pas de publicité.** Aucune pub pour un serveur, un shop ou un Discord sans accord du staff, y compris en MP.',
-            '**4. Pas de leak.** Partager, revendre ou demander nos scripts (ou ceux d’autres créateurs) en dehors de Tebex = bannissement définitif et licence révoquée.',
-            '**5. Le bon salon.** Bugs dans 🐞 bug-report, idées dans 💡 suggestions, aide privée via un ticket.',
-            '**6. Support.** Le support passe par les tickets, pas par MP. Pour un script acheté, ouvre un ticket « Support ».',
-            '**7. Contenu.** Pas de contenu NSFW, choquant ou illégal. Pseudos et avatars corrects.',
-            '**8. Le staff a le dernier mot.** En cas de doute, demande à un modérateur.',
-            '',
-            'Les conditions d’utilisation de Discord s’appliquent : discord.com/terms',
-          ].join('\n')),
+          base().setTitle('📜 Règlement du serveur').setDescription(RULES_TEXT),
           base().setDescription('Clique sur le bouton ci-dessous pour accepter le règlement et accéder à tout le serveur.'),
         ],
         components: [new ActionRowBuilder().addComponents(

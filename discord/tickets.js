@@ -4,8 +4,10 @@ import {
 } from 'discord.js';
 import { COLOR, TICKETS } from './structure.js';
 import { WaitMember } from './jobs.js';
+import { createAgent } from './ai.js';
 
 const AI_FOOTER = 'Assistant Orion · réponse automatique';
+const IA_FOOTER = 'Assistant Orion · IA';
 const MAX_AI_TURNS = 3;           // au-delà, transfert automatique à l'équipe
 const REMIND_AFTER = 24 * 3600e3; // relance sans réponse du client
 const CLOSE_AFTER = 48 * 3600e3;  // fermeture sans réponse du client
@@ -27,6 +29,7 @@ const baseName = (name) => name.replace(/^[🔴🟢🤖]・?/u, '');
 
 export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
   const cfg = () => getCfg();
+  const agent = createAgent({ db });
   const eph = (content, extra = {}) => ({ content, flags: MessageFlags.Ephemeral, ...extra });
   const row = (id) => db.prepare('SELECT * FROM tickets WHERE channel_id = ?').get(id);
   const supportRoles = () => ['support', 'mod', 'dev'].map((k) => cfg().roles[k]).filter(Boolean);
@@ -81,7 +84,7 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
       embeds: [
         new EmbedBuilder().setColor(COLOR).setTitle(`${t.emoji} ${t.label}`).setTimestamp()
           .setDescription(`Merci <@${i.user.id}> !\n\n${HELP[t.value]}\n\n${ai
-            ? '🤖 **L’assistant Orion** te propose tout de suite les pages de la doc qui correspondent à ton message. Si ça ne suffit pas, clique sur **Parler à l’équipe** : un membre du staff prendra le relais.'
+            ? (agent.ready() ? '🤖 **L’assistant Orion (IA)** te répond tout de suite. S’il ne peut pas t’aider, il passe la main à l’équipe, ou clique sur **Parler à l’équipe**.' : '🤖 **L’assistant Orion** te propose tout de suite les pages de la doc qui correspondent à ton message. Si ça ne suffit pas, clique sur **Parler à l’équipe** : un membre du staff prendra le relais.')
             : 'L’équipe arrive.'}`),
         clientSheet(i.user.id, i.member),
       ],
@@ -221,9 +224,49 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
     pending.set(channel.id, { text: all, t: setTimeout(() => { pending.delete(channel.id); replyAi(channel, all).catch((e) => console.error('[assistant]', e.message)); }, 3500) });
   }
 
+  // Historique du ticket pour l'IA : messages du client et réponses de l'assistant
+  async function history(channel, ownerId) {
+    const msgs = [...(await channel.messages.fetch({ limit: 40 })).values()].reverse();
+    const out = [];
+    for (const m of msgs) {
+      if (m.author.id === ownerId) {
+        const text = [m.content, ...m.attachments.map((a) => `[pièce jointe : ${a.name}]`)].filter(Boolean).join('\n').slice(0, 1500);
+        if (text) out.push({ role: 'user', text });
+      } else if (m.author.id === client.user.id && [AI_FOOTER, IA_FOOTER].includes(m.embeds[0]?.footer?.text)) {
+        out.push({ role: 'assistant', text: (m.embeds[0].description || '').slice(0, 1500) });
+      }
+    }
+    return out;
+  }
+
+  // Vraie IA (Claude) : Haiku répond, Opus en dernier recours
+  async function replySmart(channel, r) {
+    await channel.sendTyping().catch(() => {});
+    const typing = setInterval(() => channel.sendTyping().catch(() => {}), 8000);
+    let res;
+    try { res = await agent.reply({ ownerId: r.discord_id, ticketType: r.type, history: await history(channel, r.discord_id) }); }
+    finally { clearInterval(typing); }
+    if (!res) return;
+    const turns = r.ai_turns + 1;
+    db.prepare('UPDATE tickets SET ai_turns = ?, last_activity = ?, reminded = 0 WHERE channel_id = ?').run(turns, Date.now(), channel.id);
+    const sources = res.sources.length ? `\n\n**Sources :** ${res.sources.map(([url, title]) => `[${String(title).slice(0, 60)}](${url})`).join(' · ')}` : '';
+    await channel.send({
+      embeds: [new EmbedBuilder().setColor(0x6eaaff).setDescription((res.text + sources).slice(0, 4000)).setFooter({ text: IA_FOOTER })],
+      components: res.transfer ? [] : [new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('orion:ai:solved').setStyle(ButtonStyle.Success).setLabel('C’est résolu').setEmoji('✅'),
+        new ButtonBuilder().setCustomId('orion:ai:human').setStyle(ButtonStyle.Primary).setLabel('Parler à l’équipe').setEmoji('🙋'),
+      )],
+    });
+    if (res.transfer) await transfer(channel, `L’assistant a transmis la demande : ${res.transfer}`);
+    else if (turns >= agent.settings().max_turns) await transfer(channel, `L’assistant a répondu ${turns} fois sans résoudre la demande.`);
+  }
+
   async function replyAi(channel, text) {
     const r = row(channel.id);
     if (!r || r.status !== 'ai') return;
+    if (agent.ready()) {
+      try { return await replySmart(channel, r); } catch (e) { console.error('[IA]', e.message); /* repli sur l'assistant gratuit */ }
+    }
     if (HUMAN.test(text)) return transfer(channel, 'Cette demande (paiement, remboursement, devis, licence ou rôle) est traitée par l’équipe.');
     const hits = search(text);
     if (!hits.length) return transfer(channel, 'Je n’ai rien trouvé dans la documentation pour ta demande.');

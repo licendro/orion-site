@@ -248,6 +248,27 @@ export async function resyncCustomer(fd) {
   go('/admin/clients', 'Rôle et salon resynchronisés par le bot.');
 }
 
+// ---------- Assistant IA des tickets ----------
+export async function saveAiSettings(fd) {
+  const who = admin('ai');
+  const num = (k, d, max) => Math.max(0, Math.min(max, Number(fd.get(k)) || d));
+  const models = ['claude-haiku-5-5', 'claude-sonnet-5-5'];
+  const advisors = ['claude-opus-5-5', 'claude-sonnet-5-5'];
+  setSetting('ai_settings', {
+    enabled: bool(fd, 'enabled'),
+    executor: models.includes(str(fd, 'executor')) ? str(fd, 'executor') : 'claude-haiku-5-5',
+    advisor: advisors.includes(str(fd, 'advisor')) ? str(fd, 'advisor') : 'claude-opus-5-5',
+    advisor_enabled: bool(fd, 'advisor_enabled'),
+    advisor_daily_limit: num('advisor_daily_limit', 15, 500),
+    daily_limit: num('daily_limit', 150, 5000),
+    web_search: bool(fd, 'web_search'),
+    max_turns: num('max_turns', 6, 30) || 6,
+    instructions: str(fd, 'instructions', 6000),
+  });
+  audit(who, 'ia.réglages', null, null);
+  go('/admin/ia', 'Réglages de l’IA enregistrés : pris en compte dès le prochain message.');
+}
+
 // ---------- Licences (API séparée) ----------
 export async function adminCreateLicence(fd) {
   const who = admin('licences');

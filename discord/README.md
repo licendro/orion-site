@@ -23,12 +23,14 @@ pm2 start npm --name orion-bot -- start && pm2 save
 - Modération : `/ban` `/unban` `/kick` `/mute` `/unmute` `/warn` `/warns` `/unwarn` `/clear` `/slowmode` `/lock` `/unlock` `/userinfo` (3 avertissements = muet 1 h automatiquement). Tout est journalisé dans #modération.
 - AutoMod Discord (créé par `npm run setup`) : invitations d'autres serveurs, spam de mentions, spam, insultes et contenu choquant.
 
-## Tickets intelligents (assistant automatique, gratuit)
+## Tickets intelligents (assistant IA)
 - Chaque ticket affiche une **fiche client** (scripts achetés, commandes, partenariat, avertissements).
-- L’**Assistant Orion** cherche dans la doc du site et répond avec le bon passage et les liens. Aucun service payant.
-  - **✅ C’est résolu** : transcript puis fermeture.
-  - **🙋 Parler à l’équipe**, sujet sensible (paiement, remboursement, devis, licence, rôle), rien trouvé dans la doc ou 3 réponses sans solution : salon renommé `🔴・…`, rôles Support/Modo/Dev pingés, l’assistant se tait.
-  - Dès qu’un membre du staff écrit ou clique **Prendre en charge** : salon renommé `🟢・…`.
-- Plus la doc (Admin → Docs) est complète, meilleures sont les réponses.
-- Relance du client après 24 h sans réponse, fermeture automatique après 48 h.
-- ⚠️ Active **Message Content Intent** (portail Discord → Bot) sinon le bot ne lit pas les messages.
+- Avec `ANTHROPIC_API_KEY` dans le `.env` du site, l’**Assistant Orion (IA)** répond :
+  - **Claude Haiku** écrit toutes les réponses ; **Claude Opus** (outil « advisor ») n’est consulté qu’en dernier recours, 1 fois max par réponse, avec un plafond quotidien ;
+  - il va chercher **à la demande** la doc, le règlement, les achats, les licences (via l’API de licences) et les bugs connus du client, et peut faire une recherche internet ;
+  - la partie fixe des consignes est mise en cache pour réduire la facture ;
+  - consignes, modèles, plafonds et consommation : **Admin → Assistant IA** sur le site.
+- Sans clé, plafond atteint ou IA en panne : l’assistant gratuit (recherche dans la doc) prend le relais.
+- **✅ C’est résolu** : transcript puis fermeture. **🙋 Parler à l’équipe**, transfert décidé par l’IA ou trop de réponses : salon renommé `🔴・…`, équipe pingée, l’IA se tait. Un membre du staff écrit ou clique **Prendre en charge** : `🟢・…`.
+- Relance après 24 h sans réponse, fermeture après 48 h.
+- ⚠️ Active **Message Content Intent** (portail Discord → Bot).
