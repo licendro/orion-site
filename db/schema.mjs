@@ -277,6 +277,7 @@ export const MIGRATIONS = [
   "ALTER TABLE products ADD COLUMN kind TEXT DEFAULT 'single'",
   'ALTER TABLE quotes ADD COLUMN discord_id TEXT',
   'ALTER TABLE quotes ADD COLUMN channel_id TEXT',
+  'ALTER TABLE changelogs ADD COLUMN kinds TEXT',
 ];
 
 export function migrate(d) {

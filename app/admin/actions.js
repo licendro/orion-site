@@ -1,6 +1,6 @@
 'use server';
 
-import { createLicence, guessKinds, licencesEnabled, listScripts, publishVersion, saveScript, setLicenceIp, setLicenceStatus } from '../../lib/licences';
+import { guessKinds } from '../../lib/changelog';
 import { redirect } from 'next/navigation';
 import { revalidateTag } from 'next/cache';
 import { can, getRole, getUser } from '../../lib/auth';
@@ -199,15 +199,10 @@ export async function publishUpdate(fd) {
   const { products } = await getFullCatalog();
   const p = products.find((x) => x.key === key);
   if (!p) go('/admin/mises-a-jour', 'Script introuvable.', true);
-  // Source de vérité : l'API de licences (dernière version renvoyée aux serveurs FiveM + page /changelog)
+  // Badges de la version (cochés, sinon devinés depuis les lignes + / ~ / -) : page /changelog et #patch-notes
   const kinds = ['ajout', 'correctif', 'amelioration'].filter((k) => bool(fd, `kind_${k}`));
   const finalKinds = kinds.length ? kinds : guessKinds(notes);
-  if (licencesEnabled()) {
-    const apiScript = str(fd, 'api_script', 64) || (await listScripts().catch(() => [])).find((s) => s.product_key === key)?.name;
-    if (!apiScript) go('/admin/mises-a-jour', 'Ce script n’existe pas encore dans l’API de licences : ajoute-le dans Admin → Licences → Scripts.', true);
-    try { await publishVersion({ script: apiScript, version: version.replace(/^v/i, ''), kinds: finalKinds, notes, by: who }); } catch (e) { go('/admin/mises-a-jour', e.message, true); }
-  }
-  db().prepare('INSERT INTO changelogs (product_key, version, notes, author) VALUES (?, ?, ?, ?)').run(key, version, notes, who);
+  db().prepare('INSERT INTO changelogs (product_key, version, notes, author, kinds) VALUES (?, ?, ?, ?, ?)').run(key, version, notes, who, finalKinds.join(','));
   db().prepare('UPDATE products SET version = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?').run(version, key);
   // Les bugs « corrigé, prochaine mise à jour » de ce script sont publiés dans cette version, et les clients prévenus
   const fixed = db().prepare("SELECT id, title FROM bugs WHERE product_key = ? AND status = 'corrige'").all(key);
@@ -267,40 +262,6 @@ export async function saveAiSettings(fd) {
   });
   audit(who, 'ia.réglages', null, null);
   go('/admin/ia', 'Réglages de l’IA enregistrés : pris en compte dès le prochain message.');
-}
-
-// ---------- Licences (API séparée) ----------
-export async function adminCreateLicence(fd) {
-  const who = admin('licences');
-  try {
-    const l = await createLicence({ script: str(fd, 'script', 64), discord_id: str(fd, 'discord_id', 30), customer: str(fd, 'customer', 80), note: str(fd, 'note', 300), by: who });
-    audit(who, 'licence.créée', l.key.slice(0, 9), { script: l.script });
-    go('/admin/licences', `Licence créée : ${l.key}`);
-  } catch (e) { if (e.digest) throw e; go('/admin/licences', e.message, true); }
-}
-export async function adminLicenceStatus(fd) {
-  const who = admin('licences');
-  const id = Number(fd.get('id'));
-  try {
-    await setLicenceStatus(id, str(fd, 'status', 20), str(fd, 'reason', 200) || null, who);
-    audit(who, 'licence.statut', `#${id}`, str(fd, 'status', 20));
-  } catch (e) { if (e.digest) throw e; go(`/admin/licences/${id}`, e.message, true); }
-  go(`/admin/licences/${id}`, 'Statut mis à jour.');
-}
-export async function adminLicenceIp(fd) {
-  const who = admin('licences');
-  const id = Number(fd.get('id'));
-  try { await setLicenceIp(id, { ip: str(fd, 'ip', 45) || null, by: 'admin' }); audit(who, 'licence.ip', `#${id}`, null); }
-  catch (e) { if (e.digest) throw e; go(`/admin/licences/${id}`, e.message, true); }
-  go(`/admin/licences/${id}`, str(fd, 'ip', 45) ? 'IP liée modifiée.' : 'IP déliée : elle se liera au prochain démarrage du serveur.');
-}
-export async function adminSaveScript(fd) {
-  const who = admin('licences');
-  try {
-    await saveScript({ name: str(fd, 'name', 64), title: str(fd, 'title', 80), product_key: str(fd, 'product_key', 80), tebex_ids: str(fd, 'tebex_ids', 300), by: who });
-    audit(who, 'licence.script', str(fd, 'name', 64), null);
-  } catch (e) { if (e.digest) throw e; go('/admin/licences?tab=scripts', e.message, true); }
-  go('/admin/licences?tab=scripts', 'Script enregistré.');
 }
 
 // ---------- Infos légales ----------

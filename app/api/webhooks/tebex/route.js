@@ -4,7 +4,6 @@ import { addJob, audit, db } from '../../../../lib/db';
 import { clientIp } from '../../../../lib/http';
 import { notify } from '../../../../lib/alerts';
 import { keyOf } from '../../../../lib/format';
-import { forwardTebexWebhook } from '../../../../lib/licences';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,9 +35,6 @@ export async function POST(req) {
 
   let body;
   try { body = JSON.parse(raw); } catch { return NextResponse.json({ error: 'json' }, { status: 400 }); }
-
-  // L'API de licences reçoit le même webhook (création / révocation des licences)
-  await forwardTebexWebhook(raw, req.headers.get('x-signature'));
 
   // Validation de l'adresse par Tebex
   if (body.type === 'validation.webhook') return ok({ id: body.id });

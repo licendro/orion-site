@@ -1,5 +1,5 @@
 import MarkdownIt from 'markdown-it';
-import { KIND_LABEL } from '../lib/licences';
+import { KIND_LABEL } from '../lib/changelog';
 
 const md = new MarkdownIt({ html: false, linkify: true, breaks: true });
 // Lignes « + / ~ / - » des notes → liste à puces avec pastilles de couleur

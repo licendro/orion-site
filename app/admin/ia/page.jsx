@@ -14,7 +14,7 @@ export default function AiAdmin({ searchParams }) {
   const docs = db().prepare('SELECT COUNT(*) n FROM docs WHERE published = 1').get().n;
   return (
     <>
-      <Head title="Assistant IA" sub="L’IA répond dans les tickets : Claude Haiku pour toutes les réponses, Claude Opus consulté seulement en dernier recours. Elle lit la doc, le règlement, les achats et les licences du client à la demande (pas tout à chaque message), et peut chercher sur internet." />
+      <Head title="Assistant IA" sub="L’IA répond dans les tickets : Claude Haiku pour toutes les réponses, Claude Opus consulté seulement en dernier recours. Elle lit la doc, le règlement et les achats du client à la demande (pas tout à chaque message), et peut chercher sur internet." />
       <Flash searchParams={searchParams} />
       {!keyOk ? <div className="flash err">Aucune clé API : ajoute <code>ANTHROPIC_API_KEY=…</code> dans le .env du site (lu aussi par le bot), puis <code>pm2 restart orion-bot</code>. En attendant, l’assistant gratuit (recherche dans la doc) répond.</div> : null}
       <div className="panel"><form action={saveAiSettings} className="pb frm">

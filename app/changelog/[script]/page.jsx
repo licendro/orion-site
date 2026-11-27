@@ -1,29 +1,17 @@
 import { notFound } from 'next/navigation';
-import { changelogOf } from '../../../lib/licences';
-import { db } from '../../../lib/db';
+import { changelogOf } from '../../../lib/changelog';
 import { getCatalog } from '../../../lib/catalog';
 import { VersionEntry } from '../../../components/Changelog';
 
 export const dynamic = 'force-dynamic';
 
-async function load(script) {
-  try { return await changelogOf(script); } catch (e) {
-    if (e.status === 404) return null;
-    // Repli local si l'API ne répond pas
-    const rows = db().prepare('SELECT c.*, p.name FROM changelogs c LEFT JOIN products p ON p.key = c.product_key WHERE c.product_key = ? ORDER BY c.id DESC').all(script);
-    if (!rows.length) return null;
-    return { script: { name: script, title: rows[0].name || script, product_key: script, latest: rows[0].version },
-      versions: rows.map((r) => ({ version: r.version, date: Date.parse(r.created_at.replace(' ', 'T') + 'Z'), kinds: [], notes: r.notes })) };
-  }
-}
-
 export async function generateMetadata({ params }) {
-  const d = await load(params.script);
+  const d = changelogOf(params.script);
   return d ? { title: `Changelog ${d.script.title}`, description: `Toutes les versions de ${d.script.title} : ajouts, améliorations, correctifs.` } : {};
 }
 
 export default async function ChangelogScript({ params }) {
-  const d = await load(params.script);
+  const d = changelogOf(params.script);
   if (!d) notFound();
   const { products } = await getCatalog();
   const product = products.find((p) => p.key === d.script.product_key);

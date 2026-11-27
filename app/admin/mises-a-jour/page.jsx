@@ -11,14 +11,14 @@ export default async function Updates({ searchParams }) {
   const name = (k) => products.find((p) => p.key === k)?.name || k;
   return (
     <>
-      <Head title="Mises à jour" sub="Publie une version : dernière version dans l’API de licences (les serveurs FiveM affichent « mise à jour disponible »), page /changelog, post dans #patch-notes et message aux clients." />
+      <Head title="Mises à jour" sub="Publie une version : version affichée sur la fiche, page /changelog, post dans #patch-notes et message dans le salon privé de chaque client qui possède le script." />
       <Flash searchParams={searchParams} />
       <div className="panel">
         <h2>Nouveau patch note</h2>
         <form action={publishUpdate} className="pb frm">
           <label>Script<select className="field" name="key" required>{products.filter((p) => !p.bundle.length).map((p) => <option key={p.key} value={p.key}>{p.name}{p.ver ? ` (v${p.ver})` : ''}</option>)}</select></label>
           <label>Nouvelle version<input className="field mono" name="version" required maxLength={20} placeholder="1.2.0" /></label>
-          <label className="full">Notes (markdown) <span className="hint">Une ligne par changement : « + » ajout, « ~ » amélioration, « - » correctif. Envoyées à l’API, à /changelog et à #patch-notes.</span>
+          <label className="full">Notes (markdown) <span className="hint">Une ligne par changement : « + » ajout, « ~ » amélioration, « - » correctif. Affichées sur /changelog et dans #patch-notes.</span>
             <textarea name="notes" required maxLength={3500} style={{ minHeight: 160 }} placeholder={'+ Nouveau menu de configuration\n~ Correction des factures en double\n- Suppression de l’ancien HUD'} />
           </label>
           <div className="full chks">

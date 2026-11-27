@@ -52,7 +52,6 @@ export default function Cgv() {
 
         <h2>8. Licence d’utilisation</h2>
         <p>L’achat d’un script vous donne une licence <b>personnelle, non exclusive et non transférable</b>, pour l’utiliser sur les serveurs FiveM liés à votre compte Cfx.re. Les fichiers de configuration et d’ouverture peuvent être modifiés ; le cœur du script reste protégé (escrow Cfx.re).</p>
-        <p>Chaque script est accompagné d’une <b>clé de licence</b> (visible dans votre espace client) que le script vérifie à son démarrage auprès de notre serveur. La licence est liée à l’adresse IP d’un serveur FiveM ; vous pouvez la changer vous-même une fois tous les 7 jours, ou nous la faire changer par le support. Si notre serveur de licences est momentanément indisponible, le script continue de démarrer pendant 72 heures.</p>
         <p>Sont interdits : la revente, le partage, la diffusion publique ou privée (« leak »), la tentative de contourner la protection, et la réutilisation du code dans un autre produit. En cas de violation, la licence peut être révoquée sans remboursement, sans préjudice d’éventuelles poursuites.</p>
 
         <h2>9. Services sur mesure et bots</h2>

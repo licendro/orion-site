@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Mise à jour du site, du bot et de l'API de licences sur le VPS :  cd /root/orion && ./deploy.sh
+# Mise à jour du site ET du bot sur le VPS :  cd /root/orion && ./deploy.sh
 set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p data
@@ -28,19 +28,10 @@ if [ -f discord/.env ]; then
   fi
 fi
 
-if [ -f licence-api/.env ]; then
-  echo "→ API de licences : dépendances + redémarrage"
-  (cd licence-api && npm ci --omit=dev --no-audit --no-fund && mkdir -p logs data backups)
-  if pm2 describe orion-api >/dev/null 2>&1; then
-    pm2 reload orion-api --update-env
-  else
-    (cd licence-api && pm2 start ecosystem.config.cjs)
-  fi
-  # Sauvegarde chaque nuit à 4 h 15 (base des licences + base du site), gardée 14 jours
-  if ! crontab -l 2>/dev/null | grep -q 'licence-api && node scripts/backup.js'; then
-    (crontab -l 2>/dev/null; echo "15 4 * * * cd $(pwd)/licence-api && node scripts/backup.js >> backups/backup.log 2>&1") | crontab -
-    echo "→ Sauvegarde nocturne installée"
-  fi
+# Sauvegarde de la base chaque nuit à 4 h 15, gardée 14 jours (dossier backups/)
+if ! crontab -l 2>/dev/null | grep -q 'scripts/backup.mjs'; then
+  (crontab -l 2>/dev/null; echo "15 4 * * * cd $(pwd) && mkdir -p backups && node scripts/backup.mjs >> backups/backup.log 2>&1") | crontab -
+  echo "→ Sauvegarde nocturne installée"
 fi
 pm2 save >/dev/null
 

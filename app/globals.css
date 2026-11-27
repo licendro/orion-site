@@ -639,19 +639,6 @@ body.site{padding-top:86px}
 .ltbl thead th{color:var(--ink);background:rgba(237,239,243,.04)}
 .ltbl tbody th{color:var(--ink);font-weight:600}
 
-/* Licences (espace client) */
-.lics{display:flex;flex-direction:column;gap:12px}
-.lic{border:1px solid var(--line);border-radius:14px;padding:16px;background:rgba(7,8,12,.6);display:flex;flex-direction:column;gap:12px}
-.lic.s-revoked{opacity:.65}
-.lic-h{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
-.lic-h b{font-size:16px}
-.lic-h a{margin-left:auto;font-size:13.5px;color:var(--acc);text-decoration:none}
-.lic-h .muted{font-size:13px}
-.lkey{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.lkey code{font-size:14px;padding:8px 12px;border:1px solid var(--line2);border-radius:9px;background:rgba(0,0,0,.35);letter-spacing:.04em}
-.lic-ip{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;color:var(--ink2)}
-.lic-ip .field{max-width:240px;min-height:34px}
-
 /* Changelog */
 .cl-scripts{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .cl-scripts a{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:rgba(7,8,12,.6);text-decoration:none;color:var(--ink)}

@@ -1,6 +1,6 @@
-// Sauvegarde nocturne : base des licences (+ base du site si SITE_DB_PATH), gardées 14 jours.
-// Cron conseillé (README) : 15 4 * * * cd /root/orion/licence-api && node scripts/backup.js >> backups/backup.log 2>&1
-import 'dotenv/config';
+// Sauvegarde nocturne de la base du site (data/orion.db), gardée 14 jours.
+// Installée par deploy.sh : 15 4 * * * cd /root/orion && node scripts/backup.mjs >> backups/backup.log 2>&1
+
 import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
@@ -10,7 +10,7 @@ const KEEP_DAYS = 14;
 fs.mkdirSync(dir, { recursive: true });
 const day = new Date().toISOString().slice(0, 10);
 
-const targets = [['licences', process.env.DB_PATH || './data/licences.db'], ['site', process.env.SITE_DB_PATH]].filter(([, f]) => f && fs.existsSync(f));
+const targets = [['site', process.env.DATABASE_PATH || './data/orion.db']].filter(([, f]) => f && fs.existsSync(f));
 for (const [name, file] of targets) {
   const dest = path.join(dir, `${name}-${day}.db`);
   const db = new Database(file, { readonly: true });

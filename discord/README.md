@@ -27,7 +27,7 @@ pm2 start npm --name orion-bot -- start && pm2 save
 - Chaque ticket affiche une **fiche client** (scripts achetés, commandes, partenariat, avertissements).
 - Avec `ANTHROPIC_API_KEY` dans le `.env` du site, l’**Assistant Orion (IA)** répond :
   - **Claude Haiku** écrit toutes les réponses ; **Claude Opus** (outil « advisor ») n’est consulté qu’en dernier recours, 1 fois max par réponse, avec un plafond quotidien ;
-  - il va chercher **à la demande** la doc, le règlement, les achats, les licences (via l’API de licences) et les bugs connus du client, et peut faire une recherche internet ;
+  - il va chercher **à la demande** la doc, le règlement, les achats et les bugs connus du client, et peut faire une recherche internet ;
   - la partie fixe des consignes est mise en cache pour réduire la facture ;
   - consignes, modèles, plafonds et consommation : **Admin → Assistant IA** sur le site.
 - Sans clé, plafond atteint ou IA en panne : l’assistant gratuit (recherche dans la doc) prend le relais.

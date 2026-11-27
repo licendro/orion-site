@@ -1,22 +1,11 @@
-import { changelogAll } from '../../lib/licences';
-import { db } from '../../lib/db';
+import { changelogAll } from '../../lib/changelog';
 import { VersionEntry } from '../../components/Changelog';
 
 export const metadata = { title: 'Changelog', description: 'Toutes les mises à jour des scripts FiveM Orion : ajouts, améliorations et correctifs.' };
 export const dynamic = 'force-dynamic';
 
-// Repli si l'API de licences ne répond pas : historique local du site
-function localData() {
-  const rows = db().prepare('SELECT c.*, p.name FROM changelogs c LEFT JOIN products p ON p.key = c.product_key ORDER BY c.id DESC LIMIT 60').all();
-  return {
-    scripts: [...new Map(rows.map((r) => [r.product_key, { name: r.product_key, title: r.name || r.product_key, latest: r.version }])).values()],
-    recent: rows.map((r) => ({ script: r.product_key, version: r.version, date: Date.parse(r.created_at.replace(' ', 'T') + 'Z'), kinds: [], notes: r.notes })),
-  };
-}
-
-export default async function ChangelogAll({ searchParams }) {
-  let data;
-  try { data = await changelogAll(); } catch { data = localData(); }
+export default function ChangelogAll({ searchParams }) {
+  const data = changelogAll();
   const title = Object.fromEntries(data.scripts.map((s) => [s.name, s.title]));
   const kind = searchParams?.type;
   const recent = kind ? data.recent.filter((v) => v.kinds.includes(kind)) : data.recent;
@@ -26,7 +15,7 @@ export default async function ChangelogAll({ searchParams }) {
       <div className="wrap" style={{ maxWidth: 980 }}>
         <div className="head" style={{ marginBottom: 24 }}>
           <div><span className="label"><i></i>Changelog</span><h2>Toutes les nouveautés.</h2></div>
-          <p className="sub">Chaque mise à jour de nos scripts, avec ses ajouts, améliorations et correctifs. Vos serveurs vous préviennent au démarrage quand une nouvelle version sort.</p>
+          <p className="sub">Chaque mise à jour de nos scripts, avec ses ajouts, améliorations et correctifs. Les mises à jour sont gratuites : téléchargez la dernière version dans votre Keymaster Cfx.re.</p>
         </div>
         <div className="cl-scripts">
           {data.scripts.map((s) => <a key={s.name} href={`/changelog/${s.name}`}><b>{s.title}</b><span className="mono">{s.latest ? `v${s.latest}` : '—'}</span></a>)}
