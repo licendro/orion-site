@@ -192,6 +192,21 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
     } catch { /* salon des transcripts absent */ }
     db.prepare('DELETE FROM tickets WHERE channel_id = ?').run(channel.id);
     setTimeout(() => channel.delete('Ticket fermé').catch(() => {}), 5000);
+
+    // Le cerveau de l'IA apprend de ce ticket (en arrière-plan, 1 appel Haiku)
+    if (r) {
+      const transcript = all.filter((m) => !m.system).map((m) => {
+        const iaMsg = m.author.id === client.user.id && [AI_FOOTER, IA_FOOTER].includes(m.embeds[0]?.footer?.text);
+        const who = m.author.id === r.discord_id ? 'client' : iaMsg ? 'ia' : m.author.bot ? null : 'equipe';
+        const text = (iaMsg ? m.embeds[0].description : m.content) || '';
+        return who && text ? { who, text: text.slice(0, 1200) } : null;
+      }).filter(Boolean);
+      const staffSpoke = transcript.some((t) => t.who === 'equipe');
+      const outcome = staffSpoke ? 'equipe' : /résolu/.test(reason) ? 'resolu_ia' : 'aucun';
+      agent.learn({ transcript, ticketType: r.type, outcome, ownerId: r.discord_id })
+        .then((x) => { if (x.learned) console.log(`[cerveau] ${x.learned} connaissance(s) apprise(s) du ticket ${channel.name}`); })
+        .catch((e) => console.error('[cerveau]', e.message));
+    }
   }
 
   // ----- Assistant automatique (recherche dans la doc, gratuit) -----
@@ -244,11 +259,12 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
     await channel.sendTyping().catch(() => {});
     const typing = setInterval(() => channel.sendTyping().catch(() => {}), 8000);
     let res;
-    try { res = await agent.reply({ ownerId: r.discord_id, ticketType: r.type, history: await history(channel, r.discord_id) }); }
+    try { res = await agent.reply({ ownerId: r.discord_id, ticketType: r.type, history: await history(channel, r.discord_id), convo: { summary: r.ai_summary || '', summarizedN: r.ai_summary_n || 0 } }); }
     finally { clearInterval(typing); }
     if (!res) return;
     const turns = r.ai_turns + 1;
-    db.prepare('UPDATE tickets SET ai_turns = ?, last_activity = ?, reminded = 0 WHERE channel_id = ?').run(turns, Date.now(), channel.id);
+    db.prepare('UPDATE tickets SET ai_turns = ?, last_activity = ?, reminded = 0, ai_summary = ?, ai_summary_n = ? WHERE channel_id = ?')
+      .run(turns, Date.now(), res.convo?.summary || null, res.convo?.summarizedN || 0, channel.id);
     const sources = res.sources.length ? `\n\n**Sources :** ${res.sources.map(([url, title]) => `[${String(title).slice(0, 60)}](${url})`).join(' · ')}` : '';
     await channel.send({
       embeds: [new EmbedBuilder().setColor(0x6eaaff).setDescription((res.text + sources).slice(0, 4000)).setFooter({ text: IA_FOOTER })],

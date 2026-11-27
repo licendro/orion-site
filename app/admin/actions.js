@@ -258,11 +258,39 @@ export async function saveAiSettings(fd) {
     daily_limit: num('daily_limit', 150, 5000),
     web_search: bool(fd, 'web_search'),
     max_turns: num('max_turns', 6, 30) || 6,
+    learning: bool(fd, 'learning'),
     instructions: str(fd, 'instructions', 6000),
   });
   audit(who, 'ia.réglages', null, null);
   go('/admin/ia', 'Réglages de l’IA enregistrés : pris en compte dès le prochain message.');
 }
+
+// ---------- Cerveau de l'IA ----------
+export async function saveMemory(fd) {
+  const who = admin('ai');
+  const id = Number(fd.get('id')) || null;
+  const title = str(fd, 'title', 120), content = str(fd, 'content', 600);
+  if (title.length < 3 || content.length < 5) go('/admin/ia#cerveau', 'Titre et contenu obligatoires.', true);
+  const kind = ['solution', 'faq', 'fait'].includes(str(fd, 'kind')) ? str(fd, 'kind') : 'fait';
+  const status = ['valide', 'archive'].includes(str(fd, 'status')) ? str(fd, 'status') : 'valide';
+  const links = str(fd, 'links', 100).split(/[\s,#]+/).map(Number).filter((x) => x > 0 && x !== id).join(',');
+  const keywords = str(fd, 'keywords', 300);
+  if (id) db().prepare('UPDATE ai_memory SET kind = ?, title = ?, content = ?, keywords = ?, links = ?, status = ?, source = \'manuel\', updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(kind, title, content, keywords, links, status, id);
+  else db().prepare('INSERT INTO ai_memory (kind, title, content, keywords, links, status, source) VALUES (?, ?, ?, ?, ?, ?, \'manuel\')').run(kind, title, content, keywords, links, status);
+  audit(who, id ? 'ia.souvenir.modifié' : 'ia.souvenir.ajouté', id ? `#${id}` : null, title);
+  go(`/admin/ia${searchQ(fd)}#cerveau`, id ? `Souvenir #${id} mis à jour.` : 'Souvenir ajouté.');
+}
+export async function deleteMemory(fd) {
+  const who = admin('ai');
+  const id = Number(fd.get('id'));
+  db().prepare('DELETE FROM ai_memory WHERE id = ?').run(id);
+  for (const r of db().prepare("SELECT id, links FROM ai_memory WHERE ',' || links || ',' LIKE ?").all(`%,${id},%`)) {
+    db().prepare('UPDATE ai_memory SET links = ? WHERE id = ?').run(r.links.split(',').filter((x) => Number(x) !== id).join(','), r.id);
+  }
+  audit(who, 'ia.souvenir.supprimé', `#${id}`, null);
+  go(`/admin/ia${searchQ(fd)}#cerveau`, `Souvenir #${id} supprimé.`);
+}
+const searchQ = (fd) => (str(fd, 'q', 80) ? `?q=${encodeURIComponent(str(fd, 'q', 80))}` : '');
 
 // ---------- Infos légales ----------
 export async function saveLegal(fd) {

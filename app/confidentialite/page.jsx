@@ -11,6 +11,7 @@ const ROWS = [
   ['Devis', 'Compte Discord, type de service, framework, budget, description', 'Répondre à votre demande et préparer un devis', 'Mesures précontractuelles', '3 ans après le dernier échange'],
   ['Idées, votes et bugs', 'Compte Discord, texte publié, votes', 'Faire fonctionner les idées et le suivi des bugs, vous prévenir de leur avancement', 'Intérêt légitime', 'Tant que la publication est en ligne ; votre nom est retiré si vous supprimez votre compte'],
   ['Tickets Discord', 'Messages échangés dans le ticket', 'Vous aider ; historique du support', 'Exécution du contrat, intérêt légitime', '3 ans après la fermeture'],
+  ['Assistant IA des tickets', 'Messages du ticket envoyés à Anthropic (Claude) pour générer la réponse ; un court profil technique retenu par l’assistant (framework, inventaire, scripts utilisés)', 'Répondre à vos demandes de support et ne pas vous reposer les mêmes questions', 'Intérêt légitime', 'Profil : 2 ans après sa dernière mise à jour ; les connaissances générales apprises ne contiennent aucune donnée personnelle'],
   ['Serveur de test', 'Compte Discord, créneau réservé', 'Gérer la file d’attente et l’accès au serveur', 'Exécution du contrat', '1 an'],
   ['Modération Discord', 'Avertissements et sanctions', 'Faire respecter le règlement du serveur', 'Intérêt légitime', '1 an'],
   ['Sécurité', 'Adresse IP (en mémoire, quelques minutes), journaux techniques', 'Limiter les abus, prévenir la fraude, corriger les pannes', 'Intérêt légitime', 'IP non enregistrée ; journaux 1 an'],
@@ -43,6 +44,7 @@ export default function Privacy() {
           <li><b>Discord Inc.</b> (États-Unis) : connexion, serveur communautaire, tickets, messages privés du bot. Transfert encadré par le Data Privacy Framework UE–États-Unis.</li>
           <li><b>Cfx.re</b> (Rockstar Games / Take-Two) : attribution des licences à votre compte FiveM (Keymaster).</li>
           <li><b>{v(l.host_name)}</b> : hébergement du site et de sa base de données.</li>
+          <li><b>Anthropic PBC</b> (États-Unis) : génération des réponses de l’assistant IA des tickets. Transfert encadré par les clauses contractuelles types de la Commission européenne.</li>
           <li><b>YouTube</b> (Google) : uniquement si vous lancez une vidéo de présentation, avec votre accord.</li>
         </ul>
         <p>Seuls l’éditeur et les membres de l’équipe Orion habilités (support) accèdent à vos données, selon leur rôle.</p>

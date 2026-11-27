@@ -201,6 +201,29 @@ CREATE TABLE IF NOT EXISTS tickets (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Cerveau de l'IA : connaissances apprises des tickets, reliées entre elles
+CREATE TABLE IF NOT EXISTS ai_memory (
+  id INTEGER PRIMARY KEY,
+  kind TEXT NOT NULL DEFAULT 'solution',   -- solution | faq | fait
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,                   -- court (≤ 600 caractères) : ce qui est réinjecté à l'IA
+  keywords TEXT DEFAULT '',                -- mots-clés séparés par des espaces (recherche)
+  links TEXT DEFAULT '',                   -- ids des souvenirs liés (« lien logique »), séparés par des virgules
+  status TEXT NOT NULL DEFAULT 'valide',   -- valide | a_verifier | archive
+  source TEXT,                             -- equipe | ia_resolu | manuel
+  uses INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_ai_memory_status ON ai_memory(status);
+
+-- Ce que l'IA retient d'un client (sa config de serveur…), pour ne pas tout redemander
+CREATE TABLE IF NOT EXISTS ai_client_notes (
+  discord_id TEXT PRIMARY KEY,
+  notes TEXT NOT NULL,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS bugs (
   id INTEGER PRIMARY KEY,
   product_key TEXT,
@@ -278,6 +301,8 @@ export const MIGRATIONS = [
   'ALTER TABLE quotes ADD COLUMN discord_id TEXT',
   'ALTER TABLE quotes ADD COLUMN channel_id TEXT',
   'ALTER TABLE changelogs ADD COLUMN kinds TEXT',
+  'ALTER TABLE tickets ADD COLUMN ai_summary TEXT',
+  'ALTER TABLE tickets ADD COLUMN ai_summary_n INTEGER DEFAULT 0',
 ];
 
 export function migrate(d) {
