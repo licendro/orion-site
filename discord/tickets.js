@@ -1,13 +1,25 @@
 // Tickets : création, fiche client, assistant automatique (recherche dans la doc), transfert au staff, prise en charge, relance et fermeture auto.
 import {
   ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, ChannelType, EmbedBuilder, MessageFlags, PermissionFlagsBits as P,
+  SlashCommandBuilder,
 } from 'discord.js';
+import { HOURS_DEFAULT, isOpen, nextOpen } from '../db/support.mjs';
+import { DEFAULT_MACROS } from '../db/macros.mjs';
 import { COLOR, TICKETS } from './structure.js';
 import { WaitMember } from './jobs.js';
 import { createAgent } from './ai.js';
 
 const AI_FOOTER = 'Assistant Orion · réponse automatique';
 const IA_FOOTER = 'Assistant Orion · IA';
+const STAFF_FOOTER = 'Réponse de l’équipe';
+const URGENT_TYPES = ['support', 'bug'];
+
+// /reponse : réponses toutes faites de l'équipe (gérées dans Admin → Support)
+export const REPLY_COMMANDS = [
+  new SlashCommandBuilder().setName('reponse').setDescription('Envoyer une réponse toute faite dans ce ticket (équipe)')
+    .addStringOption((o) => o.setName('nom').setDescription('Réponse à envoyer').setRequired(true).setAutocomplete(true))
+    .addStringOption((o) => o.setName('ajout').setDescription('Texte à ajouter à la fin (facultatif)').setMaxLength(500)),
+];
 const MAX_AI_TURNS = 3;           // au-delà, transfert automatique à l'équipe
 const REMIND_AFTER = 24 * 3600e3; // relance sans réponse du client
 const CLOSE_AFTER = 48 * 3600e3;  // fermeture sans réponse du client
@@ -25,7 +37,7 @@ const HELP = {
   other: 'Explique ta demande.',
 };
 
-const baseName = (name) => name.replace(/^[🔴🟢🤖]・?/u, '');
+const baseName = (name) => name.replace(/^(?:🚨・?)?[🔴🟢🤖]?・?/u, '');
 
 export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
   const cfg = () => getCfg();
@@ -34,11 +46,40 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
   const row = (id) => db.prepare('SELECT * FROM tickets WHERE channel_id = ?').get(id);
   const supportRoles = () => ['support', 'mod', 'dev'].map((k) => cfg().roles[k]).filter(Boolean);
 
-  const buttons = (ai) => new ActionRowBuilder().addComponents(
+  // ----- Horaires -----
+  const hours = () => {
+    const r = db.prepare("SELECT value FROM settings WHERE key = 'support_hours'").get();
+    try { return { ...HOURS_DEFAULT, ...(r ? JSON.parse(r.value) : {}) }; } catch { return HOURS_DEFAULT; }
+  };
+  // Phrase à afficher si l'équipe n'est pas là en ce moment (sinon chaîne vide)
+  function offHoursNote() {
+    const h = hours();
+    if (isOpen(h)) return '';
+    const n = nextOpen(h);
+    return `🌙 **L’équipe n’est pas disponible en ce moment**${n ? ` : elle revient <t:${Math.floor(n / 1000)}:R> (<t:${Math.floor(n / 1000)}:f>)` : ''}. ${h.note || ''}`.trim();
+  }
+
+  // ----- Statistiques -----
+  const stat = {
+    open(channelId, userId, type, priority = 'normal') {
+      db.prepare('INSERT OR REPLACE INTO ticket_stats (channel_id, discord_id, type, priority, opened_at) VALUES (?, ?, ?, ?, ?)').run(channelId, userId, type, priority, Date.now());
+    },
+    first(channelId, by, staffId = null) {
+      db.prepare('UPDATE ticket_stats SET first_response_at = COALESCE(first_response_at, ?), first_response_by = COALESCE(first_response_by, ?) WHERE channel_id = ?').run(Date.now(), by, channelId);
+      if (staffId) db.prepare('UPDATE ticket_stats SET staff_id = COALESCE(staff_id, ?) WHERE channel_id = ?').run(staffId, channelId);
+    },
+    set(channelId, fields) {
+      const keys = Object.keys(fields);
+      db.prepare(`UPDATE ticket_stats SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE channel_id = ?`).run(...keys.map((k) => fields[k]), channelId);
+    },
+  };
+
+  const buttons = (ai, urgent = false) => new ActionRowBuilder().addComponents(
     ...(ai ? [
       new ButtonBuilder().setCustomId('orion:ai:solved').setStyle(ButtonStyle.Success).setLabel('C’est résolu').setEmoji('✅'),
       new ButtonBuilder().setCustomId('orion:ai:human').setStyle(ButtonStyle.Primary).setLabel('Parler à l’équipe').setEmoji('🙋'),
     ] : []),
+    ...(urgent ? [new ButtonBuilder().setCustomId('orion:ticket:urgent').setStyle(ButtonStyle.Danger).setLabel('Urgent : serveur en panne').setEmoji('🚨')] : []),
     new ButtonBuilder().setCustomId('orion:ticket:claim').setStyle(ButtonStyle.Secondary).setLabel('Prendre en charge').setEmoji('🫡'),
     new ButtonBuilder().setCustomId('orion:ticket:close').setStyle(ButtonStyle.Danger).setLabel('Fermer').setEmoji('🔒'),
   );
@@ -78,6 +119,8 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
     const channel = await createChannel(i.guild, i.user, t, ai ? '🤖' : '');
     db.prepare('INSERT INTO tickets (channel_id, discord_id, type, status, last_activity) VALUES (?, ?, ?, ?, ?)')
       .run(channel.id, i.user.id, t.value, ai ? 'ai' : 'staff', Date.now());
+    stat.open(channel.id, i.user.id, t.value);
+    const off = offHoursNote();
 
     await channel.send({
       content: `<@${i.user.id}>`,
@@ -85,10 +128,10 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
         new EmbedBuilder().setColor(COLOR).setTitle(`${t.emoji} ${t.label}`).setTimestamp()
           .setDescription(`Merci <@${i.user.id}> !\n\n${HELP[t.value]}\n\n${ai
             ? (agent.ready() ? '🤖 **L’assistant Orion (IA)** te répond tout de suite. S’il ne peut pas t’aider, il passe la main à l’équipe, ou clique sur **Parler à l’équipe**.' : '🤖 **L’assistant Orion** te propose tout de suite les pages de la doc qui correspondent à ton message. Si ça ne suffit pas, clique sur **Parler à l’équipe** : un membre du staff prendra le relais.')
-            : 'L’équipe arrive.'}`),
+            : 'L’équipe arrive.'}${off ? `\n\n${off}` : ''}${URGENT_TYPES.includes(t.value) ? '\n\n🚨 Ton serveur est **en panne à cause d’un de nos scripts** ? Clique sur **Urgent** : l’équipe est prévenue en priorité.' : ''}`),
         clientSheet(i.user.id, i.member),
       ],
-      components: [buttons(ai)],
+      components: [buttons(ai, URGENT_TYPES.includes(t.value))],
     });
     await logTo('logs', new EmbedBuilder().setColor(COLOR).setDescription(`🎫 Ticket **${t.label}** ouvert par <@${i.user.id}> : <#${channel.id}>`).setTimestamp());
     return i.editReply(`✅ Ton ticket est ouvert : <#${channel.id}>`);
@@ -132,11 +175,13 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
     } else {
       channel = await createChannel(guild, member.user, t, '🔴');
       db.prepare("INSERT INTO tickets (channel_id, discord_id, type, status, last_activity) VALUES (?, ?, ?, 'staff', ?)").run(channel.id, q.discord_id, t.value, Date.now());
+      stat.open(channel.id, q.discord_id, t.value);
+      stat.set(channel.id, { transferred_at: Date.now() });
       await channel.send({
         content: `<@${q.discord_id}> ${roles.map((id) => `<@&${id}>`).join(' ')}`,
         allowedMentions: { users: [q.discord_id], roles },
         embeds: [
-          new EmbedBuilder().setColor(COLOR).setDescription(`Merci <@${q.discord_id}> pour ta demande de devis ! L’équipe te répond **ici** sous 24 h avec un prix et un délai. Tu peux ajouter des détails, captures ou exemples dans ce salon.`),
+          new EmbedBuilder().setColor(COLOR).setDescription(`Merci <@${q.discord_id}> pour ta demande de devis ! L’équipe te répond **ici** sous 24 h avec un prix et un délai. Tu peux ajouter des détails, captures ou exemples dans ce salon.${offHoursNote() ? `\n\n${offHoursNote()}` : ''}`),
           embed, clientSheet(q.discord_id, member),
         ],
         components: [buttons(false)],
@@ -152,18 +197,23 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
   }
 
   // ----- Transfert à l'équipe -----
-  async function transfer(channel, why) {
+  async function transfer(channel, why, { urgent = false } = {}) {
     const r = row(channel.id);
-    if (!r || r.status !== 'ai') return;
-    db.prepare("UPDATE tickets SET status = 'staff' WHERE channel_id = ?").run(channel.id);
-    await channel.setName(`🔴・${baseName(channel.name)}`).catch(() => {});
+    if (!r || (r.status !== 'ai' && !urgent)) return;
+    if (r.status === 'ai') db.prepare("UPDATE tickets SET status = 'staff' WHERE channel_id = ?").run(channel.id);
+    stat.set(channel.id, { transferred_at: Date.now() });
+    const isUrgent = urgent || r.priority === 'urgent';
+    await channel.setName(`${isUrgent ? '🚨・' : ''}${r.status === 'claimed' ? '🟢' : '🔴'}・${baseName(channel.name)}`).catch(() => {});
+    if (isUrgent) await channel.setPosition(0).catch(() => {}); // en haut de la catégorie
     const roles = supportRoles();
+    const off = offHoursNote();
     await channel.send({
       content: roles.map((id) => `<@&${id}>`).join(' ') || undefined,
       allowedMentions: { roles },
-      embeds: [new EmbedBuilder().setColor(0xff7a2f).setTitle('🙋 Ticket transféré à l’équipe')
-        .setDescription(`${why}\n\nUn membre du staff va prendre le relais. L’assistant automatique ne répond plus dans ce ticket.`)],
+      embeds: [new EmbedBuilder().setColor(isUrgent ? 0xef4444 : 0xff7a2f).setTitle(isUrgent ? '🚨 Ticket URGENT : serveur en panne' : '🙋 Ticket transféré à l’équipe')
+        .setDescription(`${why}\n\nUn membre du staff va prendre le relais. L’assistant ne répond plus dans ce ticket.${off ? `\n\n${off}${isUrgent ? ' Les tickets urgents sont traités en premier.' : ''}` : ''}`)],
     });
+    if (isUrgent) await logTo('logs', new EmbedBuilder().setColor(0xef4444).setDescription(`🚨 Ticket urgent : <#${channel.id}> (<@${r.discord_id}>)`).setTimestamp());
   }
 
   // ----- Fermeture (transcript puis suppression) -----
@@ -193,12 +243,30 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
     db.prepare('DELETE FROM tickets WHERE channel_id = ?').run(channel.id);
     setTimeout(() => channel.delete('Ticket fermé').catch(() => {}), 5000);
 
+    // Statistiques + demande de note au client (sauf fermeture pour inactivité)
+    const st = db.prepare('SELECT * FROM ticket_stats WHERE channel_id = ?').get(channel.id);
+    const staffSpokeIds = all.filter((m) => r && m.author.id !== r.discord_id && !m.author.bot).map((m) => m.author.id);
+    const resolvedBy = /inactif/.test(reason) ? 'inactif' : staffSpokeIds.length || r?.status !== 'ai' ? 'equipe' : /résolu/.test(reason) ? 'ia' : 'client';
+    if (st) {
+      stat.set(channel.id, { closed_at: Date.now(), resolved_by: resolvedBy, reason, staff_id: st.staff_id || r?.claimed_by || staffSpokeIds.at(-1) || null, ai_turns: r?.ai_turns ?? st.ai_turns });
+      if (r && resolvedBy !== 'inactif' && st.first_response_at) {
+        const u = await client.users.fetch(r.discord_id).catch(() => null);
+        await u?.send({
+          embeds: [new EmbedBuilder().setColor(COLOR).setTitle('⭐ Ton avis sur notre support')
+            .setDescription(`Ton ticket **${baseName(channel.name)}** est fermé. Comment s’est passée l’aide ${resolvedBy === 'ia' ? 'de l’assistant' : 'de l’équipe'} ?`)],
+          components: [new ActionRowBuilder().addComponents([1, 2, 3, 4, 5].map((n) => new ButtonBuilder()
+            .setCustomId(`orion:rate:${channel.id}:${n}`).setStyle(n >= 4 ? ButtonStyle.Success : n <= 2 ? ButtonStyle.Danger : ButtonStyle.Secondary).setLabel('⭐'.repeat(n))))],
+        }).catch(() => {}); // MP fermés : tant pis
+      }
+    }
+
     // Le cerveau de l'IA apprend de ce ticket (en arrière-plan, 1 appel Haiku)
     if (r) {
       const transcript = all.filter((m) => !m.system).map((m) => {
         const iaMsg = m.author.id === client.user.id && [AI_FOOTER, IA_FOOTER].includes(m.embeds[0]?.footer?.text);
-        const who = m.author.id === r.discord_id ? 'client' : iaMsg ? 'ia' : m.author.bot ? null : 'equipe';
-        const text = (iaMsg ? m.embeds[0].description : m.content) || '';
+        const macro = m.author.id === client.user.id && String(m.embeds[0]?.footer?.text || '').startsWith(STAFF_FOOTER);
+        const who = m.author.id === r.discord_id ? 'client' : iaMsg ? 'ia' : macro ? 'equipe' : m.author.bot ? null : 'equipe';
+        const text = (iaMsg || macro ? m.embeds[0].description : m.content) || '';
         return who && text ? { who, text: text.slice(0, 1200) } : null;
       }).filter(Boolean);
       const staffSpoke = transcript.some((t) => t.who === 'equipe');
@@ -245,8 +313,11 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
     const out = [];
     for (const m of msgs) {
       if (m.author.id === ownerId) {
-        const text = [m.content, ...m.attachments.map((a) => `[pièce jointe : ${a.name}]`)].filter(Boolean).join('\n').slice(0, 1500);
-        if (text) out.push({ role: 'user', text });
+        // Captures d'écran : envoyées à l'IA (elle lit les erreurs F8 / console)
+        const images = [...m.attachments.values()].filter((a) => /^image\/(png|jpe?g|webp|gif)$/.test(a.contentType || '') && a.size < 5e6).map((a) => a.url);
+        const others = [...m.attachments.values()].filter((a) => !images.includes(a.url)).map((a) => `[fichier joint : ${a.name}]`);
+        const text = [m.content, ...others].filter(Boolean).join('\n').slice(0, 1500) || (images.length ? '(capture d’écran)' : '');
+        if (text) out.push({ role: 'user', text, images });
       } else if (m.author.id === client.user.id && [AI_FOOTER, IA_FOOTER].includes(m.embeds[0]?.footer?.text)) {
         out.push({ role: 'assistant', text: (m.embeds[0].description || '').slice(0, 1500) });
       }
@@ -262,7 +333,9 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
     try { res = await agent.reply({ ownerId: r.discord_id, ticketType: r.type, history: await history(channel, r.discord_id), convo: { summary: r.ai_summary || '', summarizedN: r.ai_summary_n || 0 } }); }
     finally { clearInterval(typing); }
     if (!res) return;
+    stat.first(channel.id, 'ia');
     const turns = r.ai_turns + 1;
+    stat.set(channel.id, { ai_turns: turns });
     db.prepare('UPDATE tickets SET ai_turns = ?, last_activity = ?, reminded = 0, ai_summary = ?, ai_summary_n = ? WHERE channel_id = ?')
       .run(turns, Date.now(), res.convo?.summary || null, res.convo?.summarizedN || 0, channel.id);
     const sources = res.sources.length ? `\n\n**Sources :** ${res.sources.map(([url, title]) => `[${String(title).slice(0, 60)}](${url})`).join(' · ')}` : '';
@@ -273,8 +346,13 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
         new ButtonBuilder().setCustomId('orion:ai:human').setStyle(ButtonStyle.Primary).setLabel('Parler à l’équipe').setEmoji('🙋'),
       )],
     });
-    if (res.transfer) await transfer(channel, `L’assistant a transmis la demande : ${res.transfer}`);
-    else if (turns >= agent.settings().max_turns) await transfer(channel, `L’assistant a répondu ${turns} fois sans résoudre la demande.`);
+    if (res.transfer) {
+      if (res.urgent) {
+        db.prepare("UPDATE tickets SET priority = 'urgent' WHERE channel_id = ?").run(channel.id);
+        stat.set(channel.id, { priority: 'urgent' });
+      }
+      await transfer(channel, `L’assistant a transmis la demande : ${res.transfer}`, { urgent: !!res.urgent });
+    } else if (turns >= agent.settings().max_turns) await transfer(channel, `L’assistant a répondu ${turns} fois sans résoudre la demande.`);
   }
 
   async function replyAi(channel, text) {
@@ -288,6 +366,8 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
     if (!hits.length) return transfer(channel, 'Je n’ai rien trouvé dans la documentation pour ta demande.');
     const turns = r.ai_turns + 1;
     db.prepare('UPDATE tickets SET ai_turns = ?, last_activity = ?, reminded = 0 WHERE channel_id = ?').run(turns, Date.now(), channel.id);
+    stat.first(channel.id, 'ia');
+    stat.set(channel.id, { ai_turns: turns });
     const [top, ...more] = hits;
     const desc = `Voici ce que dit la documentation :\n\n📘 **[${top.title}](${site()}/docs/${top.slug})**\n${excerpt(top.excerpt || top.body)}`
       + (more.length ? `\n\n**À voir aussi :**\n${more.map((d) => `• [${d.title}](${site()}/docs/${d.slug})`).join('\n')}` : '')
@@ -322,14 +402,61 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
     if (i.customId === 'orion:ticket:claim') {
       if (!isStaff(i.member)) return i.reply(eph('Réservé à l’équipe.'));
       db.prepare("UPDATE tickets SET status = 'claimed', claimed_by = ? WHERE channel_id = ?").run(i.user.id, i.channel.id);
-      await i.channel.setName(`🟢・${baseName(i.channel.name)}`).catch(() => {});
+      stat.set(i.channel.id, { staff_id: i.user.id });
+      await i.channel.setName(`${r?.priority === 'urgent' ? '🚨・' : ''}🟢・${baseName(i.channel.name)}`).catch(() => {});
       return i.reply({ embeds: [new EmbedBuilder().setColor(0x4ade80).setDescription(`🫡 Ticket pris en charge par <@${i.user.id}>.`)] });
+    }
+    if (i.customId === 'orion:ticket:urgent') {
+      if (!mine && !isStaff(i.member)) return i.reply(eph('Seul l’auteur du ticket peut le marquer urgent.'));
+      if (r?.priority === 'urgent') return i.reply(eph('Ton ticket est déjà marqué urgent : l’équipe est prévenue.'));
+      db.prepare("UPDATE tickets SET priority = 'urgent' WHERE channel_id = ?").run(i.channel.id);
+      stat.set(i.channel.id, { priority: 'urgent' });
+      await i.reply(eph('🚨 C’est noté : l’équipe est prévenue en priorité. Donne un maximum de détails (script, erreur F8 / console, captures).'));
+      return transfer(i.channel, `<@${owner}> signale que **son serveur est en panne**.`, { urgent: true });
     }
     if (i.customId === 'orion:ticket:close') {
       if (!isStaff(i.member) && !mine) return i.reply(eph('Seuls l’équipe ou l’auteur peuvent fermer ce ticket.'));
       await i.reply({ embeds: [new EmbedBuilder().setColor(0x9aa0ad).setDescription(`🔒 Ticket fermé par <@${i.user.id}>. Suppression dans 5 secondes…`)] });
       return close(i.channel, i.user.id, isStaff(i.member) ? 'fermé par l’équipe' : 'fermé par le client');
     }
+  }
+
+  // ----- Note du client (bouton dans le MP envoyé à la fermeture) -----
+  async function rate(i) {
+    const [, , channelId, n] = i.customId.split(':');
+    const st = db.prepare('SELECT * FROM ticket_stats WHERE channel_id = ?').get(channelId);
+    if (!st || st.discord_id !== i.user.id) return i.reply(eph('Ce ticket n’existe plus.'));
+    if (st.rating) return i.update({ embeds: [new EmbedBuilder().setColor(COLOR).setDescription(`Tu as déjà donné ${'⭐'.repeat(st.rating)}. Merci !`)], components: [] });
+    const note = Math.max(1, Math.min(5, Number(n)));
+    stat.set(channelId, { rating: note, rated_at: Date.now() });
+    await i.update({ embeds: [new EmbedBuilder().setColor(0x4ade80).setDescription(`Merci pour ta note ${'⭐'.repeat(note)} !${note <= 2 ? ' Désolé que ça ne se soit pas bien passé : un responsable va regarder ton ticket.' : ''}`)], components: [] });
+    if (note <= 2) await logTo('logs', new EmbedBuilder().setColor(0xef4444).setDescription(`⭐ Note basse (${note}/5) de <@${i.user.id}> pour un ticket ${st.type}${st.staff_id ? ` traité par <@${st.staff_id}>` : ' traité par l’assistant'}. Historique dans #transcripts.`).setTimestamp());
+  }
+
+  // ----- Réponses toutes faites (/reponse) -----
+  async function replyCommand(i) {
+    if (!isStaff(i.member)) return i.reply(eph('Réservé à l’équipe.'));
+    const r = row(i.channel.id);
+    if (!r) return i.reply(eph('À utiliser dans un ticket.'));
+    const mac = db.prepare('SELECT * FROM ticket_macros WHERE name = ?').get(i.options.getString('nom', true));
+    if (!mac) return i.reply(eph('Réponse introuvable : gère-les dans Admin → Support sur le site.'));
+    const extra = i.options.getString('ajout');
+    const text = (mac.content + (extra ? `\n\n${extra}` : ''))
+      .replaceAll('{client}', `<@${r.discord_id}>`).replaceAll('{equipe}', i.member.displayName).replaceAll('{site}', site());
+    db.prepare('UPDATE ticket_macros SET uses = uses + 1 WHERE name = ?').run(mac.name);
+    db.prepare('UPDATE tickets SET last_activity = ?, reminded = 0 WHERE channel_id = ?').run(Date.now(), i.channel.id);
+    stat.first(i.channel.id, 'equipe', i.user.id);
+    if (r.status === 'ai') {
+      db.prepare("UPDATE tickets SET status = 'claimed', claimed_by = ? WHERE channel_id = ?").run(i.user.id, i.channel.id);
+      await i.channel.setName(`${r.priority === 'urgent' ? '🚨・' : ''}🟢・${baseName(i.channel.name)}`).catch(() => {});
+    }
+    await i.reply({ embeds: [new EmbedBuilder().setColor(COLOR).setTitle(mac.title).setDescription(text.slice(0, 4000))
+      .setFooter({ text: `${STAFF_FOOTER} · ${i.member.displayName}`, iconURL: i.user.displayAvatarURL?.() || undefined })] });
+  }
+  async function replyAutocomplete(i) {
+    const q = String(i.options.getFocused() || '').toLowerCase();
+    const rows = db.prepare('SELECT name, title FROM ticket_macros ORDER BY uses DESC, title').all().filter((m) => `${m.name} ${m.title}`.toLowerCase().includes(q)).slice(0, 25);
+    return i.respond(rows.map((m) => ({ name: m.title.slice(0, 100), value: m.name })));
   }
 
   // ----- Messages dans les tickets -----
@@ -339,14 +466,16 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
     if (!r) return;
     db.prepare('UPDATE tickets SET last_activity = ?, reminded = 0 WHERE channel_id = ?').run(Date.now(), m.channel.id);
     if (m.author.id !== r.discord_id && isStaff(m.member)) {
+      stat.first(m.channel.id, 'equipe', m.author.id);
       // Le staff répond : l'IA se retire
       if (r.status === 'ai') {
         db.prepare("UPDATE tickets SET status = 'claimed', claimed_by = ? WHERE channel_id = ?").run(m.author.id, m.channel.id);
-        await m.channel.setName(`🟢・${baseName(m.channel.name)}`).catch(() => {});
+        await m.channel.setName(`${r.priority === 'urgent' ? '🚨・' : ''}🟢・${baseName(m.channel.name)}`).catch(() => {});
       }
       return;
     }
-    if (m.author.id === r.discord_id && r.status === 'ai' && m.content) scheduleAi(m.channel, m.content);
+    // Le client écrit (texte ou capture d'écran) : l'assistant répond
+    if (m.author.id === r.discord_id && r.status === 'ai' && (m.content || m.attachments.size)) scheduleAi(m.channel, m.content || '[capture d’écran]');
   }
 
   // ----- Relance et fermeture automatique -----
@@ -375,9 +504,13 @@ export function createTickets({ client, db, getCfg, staffIds, isStaff }) {
   }
 
   return {
-    open, button, message, adopt,
+    open, button, message, adopt, rate, replyCommand, replyAutocomplete,
     jobs: { 'quote.ticket': quoteTicket },
     start() {
+      if (!db.prepare('SELECT COUNT(*) n FROM ticket_macros').get().n) {
+        const ins = db.prepare('INSERT OR IGNORE INTO ticket_macros (name, title, content) VALUES (?, ?, ?)');
+        for (const m of DEFAULT_MACROS) ins.run(...m);
+      }
       setInterval(() => sweep().catch((e) => console.error('[tickets]', e.message)), 10 * 60e3);
       // Historique des tickets gardé 3 ans (politique de confidentialité)
       const purge = async () => {

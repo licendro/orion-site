@@ -201,6 +201,35 @@ CREATE TABLE IF NOT EXISTS tickets (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Statistiques du support : une ligne par ticket (gardée après la fermeture)
+CREATE TABLE IF NOT EXISTS ticket_stats (
+  channel_id TEXT PRIMARY KEY,
+  discord_id TEXT,
+  type TEXT,
+  priority TEXT DEFAULT 'normal',
+  opened_at INTEGER,
+  first_response_at INTEGER,
+  first_response_by TEXT,        -- ia | equipe
+  transferred_at INTEGER,
+  staff_id TEXT,                 -- membre de l'équipe qui a traité le ticket
+  closed_at INTEGER,
+  resolved_by TEXT,              -- ia | equipe | client | inactif
+  reason TEXT,
+  ai_turns INTEGER DEFAULT 0,
+  rating INTEGER,                -- note de 1 à 5 donnée par le client
+  rated_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_ticket_stats_open ON ticket_stats(opened_at);
+
+-- Réponses toutes faites de l'équipe (/reponse)
+CREATE TABLE IF NOT EXISTS ticket_macros (
+  name TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  uses INTEGER DEFAULT 0,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Cerveau de l'IA : connaissances apprises des tickets, reliées entre elles
 CREATE TABLE IF NOT EXISTS ai_memory (
   id INTEGER PRIMARY KEY,
@@ -303,6 +332,7 @@ export const MIGRATIONS = [
   'ALTER TABLE changelogs ADD COLUMN kinds TEXT',
   'ALTER TABLE tickets ADD COLUMN ai_summary TEXT',
   'ALTER TABLE tickets ADD COLUMN ai_summary_n INTEGER DEFAULT 0',
+  "ALTER TABLE tickets ADD COLUMN priority TEXT DEFAULT 'normal'",
 ];
 
 export function migrate(d) {

@@ -10,7 +10,7 @@ const ROWS = [
   ['Acceptation des CGV', 'Version des CGV acceptée, renonciation au droit de rétractation, produits, date', 'Prouver votre accord au moment de la commande', 'Obligation légale (Code de la consommation)', '5 ans'],
   ['Devis', 'Compte Discord, type de service, framework, budget, description', 'Répondre à votre demande et préparer un devis', 'Mesures précontractuelles', '3 ans après le dernier échange'],
   ['Idées, votes et bugs', 'Compte Discord, texte publié, votes', 'Faire fonctionner les idées et le suivi des bugs, vous prévenir de leur avancement', 'Intérêt légitime', 'Tant que la publication est en ligne ; votre nom est retiré si vous supprimez votre compte'],
-  ['Tickets Discord', 'Messages échangés dans le ticket', 'Vous aider ; historique du support', 'Exécution du contrat, intérêt légitime', '3 ans après la fermeture'],
+  ['Tickets Discord', 'Messages et captures échangés dans le ticket, note de satisfaction, délais de réponse', 'Vous aider ; historique du support', 'Exécution du contrat, intérêt légitime', '3 ans après la fermeture'],
   ['Assistant IA des tickets', 'Messages du ticket envoyés à Anthropic (Claude) pour générer la réponse ; un court profil technique retenu par l’assistant (framework, inventaire, scripts utilisés)', 'Répondre à vos demandes de support et ne pas vous reposer les mêmes questions', 'Intérêt légitime', 'Profil : 2 ans après sa dernière mise à jour ; les connaissances générales apprises ne contiennent aucune donnée personnelle'],
   ['Serveur de test', 'Compte Discord, créneau réservé', 'Gérer la file d’attente et l’accès au serveur', 'Exécution du contrat', '1 an'],
   ['Modération Discord', 'Avertissements et sanctions', 'Faire respecter le règlement du serveur', 'Intérêt légitime', '1 an'],

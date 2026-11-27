@@ -674,3 +674,7 @@ body.site{padding-top:86px}
 .mem summary .muted{font-size:12.5px}
 .mem.s-archive{opacity:.55}
 .mem form{margin:12px 0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:18px}
+.kpis>div{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:rgba(237,239,243,.02);display:flex;flex-direction:column;gap:4px}
+.kpis b{font:600 24px "Inter Tight",Inter,sans-serif}
+.kpis span{color:var(--ink3);font-size:12.5px}

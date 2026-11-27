@@ -32,5 +32,10 @@ pm2 start npm --name orion-bot -- start && pm2 save
   - consignes, modèles, plafonds et consommation : **Admin → Assistant IA** sur le site.
 - Sans clé, plafond atteint ou IA en panne : l’assistant gratuit (recherche dans la doc) prend le relais.
 - **✅ C’est résolu** : transcript puis fermeture. **🙋 Parler à l’équipe**, transfert décidé par l’IA ou trop de réponses : salon renommé `🔴・…`, équipe pingée, l’IA se tait. Un membre du staff écrit ou clique **Prendre en charge** : `🟢・…`.
+- **Captures d’écran** : l’IA lit les images envoyées par le client (erreurs F8, console, txAdmin) — les 3 plus récentes.
+- **🚨 Urgent** (tickets Support et Bug) : le client signale un serveur en panne → salon `🚨・…` remonté en haut, équipe pingée, alerte dans #logs. L’IA peut aussi le marquer urgent.
+- **/reponse** (équipe) : réponses toutes faites, gérées dans Admin → Support sur le site (variables `{client}`, `{equipe}`, `{site}`).
+- **Horaires** (Admin → Support) : hors horaires, le ticket indique quand l’équipe revient ; l’IA répond 24 h/24.
+- **Note de satisfaction** : à la fermeture, le client reçoit en MP des boutons 1 à 5 ⭐ ; une note ≤ 2 alerte #logs. Statistiques (temps de réponse, part réglée par l’IA, notes par membre) dans Admin → Support.
 - Relance après 24 h sans réponse, fermeture après 48 h.
 - ⚠️ Active **Message Content Intent** (portail Discord → Bot).

@@ -97,7 +97,7 @@ export function createAgent({ db }) {
     { name: 'memoire', description: 'Cherche dans ta mémoire (solutions déjà trouvées dans d’anciens tickets, réponses de l’équipe). Les souvenirs les plus proches de la demande sont déjà fournis : n’appelle cet outil que pour chercher autre chose.',
       input_schema: { type: 'object', properties: { recherche: { type: 'string' } }, required: ['recherche'] } },
     { name: 'transferer_equipe', description: 'Transfère le ticket à un humain de l’équipe. À utiliser pour : remboursement, paiement, achat ou rôle manquant, transfert de licence, bug qui persiste après dépannage, devis, client mécontent, demande explicite d’un humain, ou toute action que tu ne peux pas faire.',
-      input_schema: { type: 'object', properties: { resume: { type: 'string', description: 'Résumé de la demande en une ou deux phrases pour l’équipe' } }, required: ['resume'] } },
+      input_schema: { type: 'object', properties: { resume: { type: 'string', description: 'Résumé de la demande en une ou deux phrases pour l’équipe' }, urgent: { type: 'boolean', description: 'true seulement si le serveur du client est en panne ou inutilisable à cause d’un script Orion' } }, required: ['resume'] } },
   ];
 
   async function runTool(name, input, ctx) {
@@ -106,7 +106,7 @@ export function createAgent({ db }) {
       case 'infos_client': return customerInfo(ctx.ownerId);
       case 'bugs_connus': return knownBugs(input.script || '');
       case 'memoire': return brain.recall(input.recherche || '') || 'Rien en mémoire sur ce sujet.';
-      case 'transferer_equipe': ctx.transfer = String(input.resume || 'Demande transférée par l’assistant.').slice(0, 400); return 'Ticket transféré à l’équipe. Préviens le client en une phrase, sans rien promettre.';
+      case 'transferer_equipe': ctx.transfer = String(input.resume || 'Demande transférée par l’assistant.').slice(0, 400); ctx.urgent = input.urgent === true; return 'Ticket transféré à l’équipe. Préviens le client en une phrase, sans rien promettre.';
       default: return 'Outil inconnu.';
     }
   }
@@ -118,6 +118,7 @@ export function createAgent({ db }) {
 FAÇON DE RÉPONDRE
 - En français, en tutoyant, clair et court : 10 lignes maximum, étapes numérotées si besoin, Markdown Discord.
 - Tu es une IA, dis-le si on te le demande. Ne prétends jamais être humain.
+- Lis attentivement les captures d’écran envoyées par le client (erreurs F8, console serveur, txAdmin) : cite l’erreur exacte avant de proposer une solution.
 - Regarde d’abord « Souvenirs utiles » plus bas : ce sont des solutions déjà validées. Sinon, avant toute réponse technique, utilise chercher_doc. Pour les achats du client, utilise infos_client. Pour un bug, regarde bugs_connus.
 - N’invente jamais une fonctionnalité, un prix, un délai, une compatibilité ou une politique. Si l’info manque, dis-le et propose l’équipe.
 - Recherche web : seulement pour une question technique générale (FiveM, ESX, ox_inventory, erreurs connues), jamais pour des infos sur Orion. Cite la source.
@@ -137,14 +138,22 @@ CONSEILLER (outil advisor)
 ${s.instructions?.trim() ? `\nCONSIGNES DE L’ÉQUIPE (prioritaires sur tout le reste, sauf la sécurité)\n${s.instructions.trim().slice(0, 6000)}\n` : ''}`;
   }
 
-  // Historique du ticket au format API (messages du client = user, réponses de l'IA = assistant)
+  // Historique du ticket au format API (messages du client = user, réponses de l'IA = assistant).
+  // Les captures d'écran ne sont envoyées que pour les 3 plus récentes (elles coûtent cher en tokens).
   function toMessages(history) {
-    const out = [];
-    for (const h of history) {
-      const last = out.at(-1);
-      if (last && last.role === h.role) last.content += `\n\n${h.text}`;
-      else out.push({ role: h.role, content: h.text });
+    let budget = 3;
+    const imgs = new Map();
+    for (let i = history.length - 1; i >= 0 && budget > 0; i--) {
+      const list = (history[i].images || []).slice(0, budget);
+      if (list.length) { imgs.set(i, list); budget -= list.length; }
     }
+    const out = [];
+    history.forEach((h, i) => {
+      const blocks = [...(imgs.get(i) || []).map((url) => ({ type: 'image', source: { type: 'url', url } })), { type: 'text', text: h.text }];
+      const last = out.at(-1);
+      if (last && last.role === h.role) last.content.push(...blocks);
+      else out.push({ role: h.role, content: blocks });
+    });
     while (out.length && out[0].role !== 'user') out.shift();
     return out.slice(-16);
   }
@@ -257,7 +266,7 @@ ${s.instructions?.trim() ? `\nCONSIGNES DE L’ÉQUIPE (prioritaires sur tout le
 
     const text = final.content.filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
     const sources = [...new Map(final.content.flatMap((b) => b.citations || []).filter((c) => c.url).map((c) => [c.url, c.title || c.url])).entries()].slice(0, 3);
-    return { text: text || 'Je transmets ta demande à l’équipe.', transfer: ctx.transfer, sources, convo: { summary, summarizedN } };
+    return { text: text || 'Je transmets ta demande à l’équipe.', transfer: ctx.transfer, urgent: ctx.urgent, sources, convo: { summary, summarizedN } };
   }
 
   return { ready, reply, learn, settings, usage, brain };

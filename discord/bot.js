@@ -12,7 +12,7 @@ import {
 import { COLOR, NOTIF_ROLES, ROLES, TICKETS } from './structure.js';
 import { addJob, db, startJobs } from './jobs.js';
 import { MOD_COMMANDS, createModeration } from './moderation.js';
-import { createTickets } from './tickets.js';
+import { REPLY_COMMANDS, createTickets } from './tickets.js';
 import { BUG_COMMANDS, createBugs } from './bugs.js';
 import { IDEA_COMMANDS, createIdeas } from './ideas.js';
 
@@ -60,8 +60,8 @@ client.once(Events.ClientReady, async (c) => {
   jobs = startJobs(client, () => cfg, { ...tickets.jobs, ...bugs.jobs, ...ideas.jobs });
   try {
     const guild = await c.guilds.fetch(process.env.GUILD_ID);
-    await guild.commands.set([...COMMANDS, ...MOD_COMMANDS, ...BUG_COMMANDS, ...IDEA_COMMANDS].map((x) => x.toJSON()));
-    console.log(`✓ ${COMMANDS.length + MOD_COMMANDS.length + BUG_COMMANDS.length + IDEA_COMMANDS.length} commandes enregistrées`);
+    await guild.commands.set([...COMMANDS, ...MOD_COMMANDS, ...BUG_COMMANDS, ...IDEA_COMMANDS, ...REPLY_COMMANDS].map((x) => x.toJSON()));
+    console.log(`✓ ${COMMANDS.length + MOD_COMMANDS.length + BUG_COMMANDS.length + IDEA_COMMANDS.length + REPLY_COMMANDS.length} commandes enregistrées`);
     await tickets.adopt(guild);
     tickets.start();
   } catch (e) { console.error('Commandes :', e.message); }
@@ -82,8 +82,12 @@ client.on(Events.GuildMemberRemove, (m) => {
 
 client.on(Events.InteractionCreate, async (i) => {
   try {
+    // Note de satisfaction : boutons envoyés en message privé à la fermeture du ticket
+    if (i.isButton() && i.customId.startsWith('orion:rate:')) return tickets.rate(i);
     if (!i.inGuild()) return;
 
+    if (i.isAutocomplete() && i.commandName === 'reponse') return tickets.replyAutocomplete(i);
+    if (i.isChatInputCommand() && i.commandName === 'reponse') return tickets.replyCommand(i);
     if (i.isAutocomplete()) return bugs.names.has(i.commandName) ? bugs.autocomplete(i) : mod.autocomplete(i);
     if ((i.isButton() || i.isStringSelectMenu()) && i.customId.startsWith('orion:bug:')) return bugs.component(i);
     if (i.isChatInputCommand() && bugs.names.has(i.commandName)) return bugs.command(i);

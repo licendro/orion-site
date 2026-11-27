@@ -265,6 +265,38 @@ export async function saveAiSettings(fd) {
   go('/admin/ia', 'Réglages de l’IA enregistrés : pris en compte dès le prochain message.');
 }
 
+// ---------- Support : horaires et réponses toutes faites ----------
+export async function saveHours(fd) {
+  const who = admin('support');
+  const slots = {};
+  for (let d = 0; d < 7; d++) {
+    const v = str(fd, `day_${d}`, 60).replace(/\s+/g, '');
+    if (v && !/^(\d{1,2}:\d{2}-\d{1,2}:\d{2})(,\d{1,2}:\d{2}-\d{1,2}:\d{2})*$/.test(v)) go('/admin/support#horaires', `Format invalide pour le jour ${d} : écris par exemple 18:00-22:00 ou 14:00-18:00,20:00-23:00.`, true);
+    slots[d] = v;
+  }
+  setSetting('support_hours', { enabled: bool(fd, 'enabled'), slots, note: str(fd, 'note', 300) });
+  audit(who, 'support.horaires', null, null);
+  go('/admin/support#horaires', 'Horaires enregistrés.');
+}
+export async function saveMacro(fd) {
+  const who = admin('support');
+  const name = str(fd, 'name', 40).toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  const title = str(fd, 'title', 100), content = str(fd, 'content', 3500);
+  if (!name || !title || !content) go('/admin/support#reponses', 'Nom, titre et texte obligatoires.', true);
+  const old = str(fd, 'old', 40);
+  if (old && old !== name) db().prepare('DELETE FROM ticket_macros WHERE name = ?').run(old);
+  db().prepare(`INSERT INTO ticket_macros (name, title, content, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(name) DO UPDATE SET title = excluded.title, content = excluded.content, updated_at = CURRENT_TIMESTAMP`).run(name, title, content);
+  audit(who, 'support.reponse', name, null);
+  go('/admin/support#reponses', `Réponse « ${name} » enregistrée (utilisable avec /reponse sur Discord).`);
+}
+export async function deleteMacro(fd) {
+  const who = admin('support');
+  db().prepare('DELETE FROM ticket_macros WHERE name = ?').run(str(fd, 'name', 40));
+  audit(who, 'support.reponse.supprimée', str(fd, 'name', 40), null);
+  go('/admin/support#reponses', 'Réponse supprimée.');
+}
+
 // ---------- Cerveau de l'IA ----------
 export async function saveMemory(fd) {
   const who = admin('ai');
