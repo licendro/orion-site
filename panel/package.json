@@ -1,0 +1,15 @@
+{
+  "name": "orion-panel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Panneau de gestion du VPS : applications pm2, mémoire, journaux, fichiers, mises à jour, alertes Discord",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "setup": "node scripts/setup.js"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0"
+  }
+}
